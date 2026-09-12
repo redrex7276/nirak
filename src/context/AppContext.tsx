@@ -46,7 +46,7 @@ interface AppContextType {
 
   createJob: (params: CreateJobParams) => Promise<Job>;
   sendOpportunities: (jobId: string, workerIds: string[]) => Promise<void>;
-  simulateWorkerReply: (jobId: string, workerId: string, reply: '1' | '0') => Promise<void>;
+  simulateWorkerReply: (jobId: string, workerId: string, reply: string) => Promise<void>;
   assignWorker: (jobId: string, workerId: string) => Promise<void>;
   completeJob: (jobId: string) => Promise<void>;
   updateWorkerAvailability: (workerId: string, availability: WorkerAvailability) => void;
@@ -224,7 +224,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSMSPanelOpen(true);
   };
 
-  const simulateWorkerReply = async (jobId: string, workerId: string, reply: '1' | '0'): Promise<void> => {
+  const simulateWorkerReply = async (jobId: string, workerId: string, reply: string): Promise<void> => {
     const targetJob = jobs.find(j => j.id === jobId);
     const workerUser = users.find(u => u.id === workerId || u.freelancerProfile?.freelancerId === workerId);
     const workerName = workerUser?.name || 'Worker';
@@ -236,6 +236,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addToast('No Active Opportunity', 'Worker has not been sent an opportunity for this job.', 'warning');
       return;
     }
+
+    // Parse the command strictly using smsService
+    const parsed = smsService.parseSMSResponse(reply);
 
     // 1. Log incoming SMS
     const incomingSMS: SMSMessage = {
@@ -252,10 +255,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // 2. Evaluate State Machine
-    const transition = evaluateSMSStateTransition(currentApp.status, reply);
+    const transition = evaluateSMSStateTransition(currentApp.status, parsed.command);
 
     if (!transition.nextStatus) {
-      addToast('Invalid Reply', transition.errorMessage || 'No state transition possible.', 'warning');
+      // Return safe guidance response to worker without corrupting state
+      const invalidGuideSMS = smsService.generateInvalidReplySMS(workerLang);
+      const outgoingGuide: SMSMessage = {
+        id: `SMS-OUT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        jobId,
+        workerId,
+        workerPhone,
+        workerName,
+        direction: 'outgoing',
+        content: invalidGuideSMS,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        status: 'delivered',
+        step: 'info'
+      };
+
+      setSmsMessages(prev => [outgoingGuide, incomingSMS, ...prev]);
+      addToast('Safe Guidance Sent', `Worker replied "${reply}". System preserved job state and sent SMS help prompt.`, 'warning');
       return;
     }
 

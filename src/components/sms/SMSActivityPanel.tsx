@@ -49,6 +49,8 @@ export const SMSActivityPanel: React.FC = () => {
   const currentWorkerUser = users.find(u => u.id === currentWorkerId || u.freelancerProfile?.freelancerId === currentWorkerId);
   const currentApplication = activeJob ? applications.find(a => a.jobId === activeJob.id && a.workerId === currentWorkerId) : null;
 
+  const [customReply, setCustomReply] = React.useState('');
+
   const handleSimulateOne = () => {
     if (activeJob) {
       simulateWorkerReply(activeJob.id, currentWorkerId, '1');
@@ -58,6 +60,16 @@ export const SMSActivityPanel: React.FC = () => {
   const handleSimulateZero = () => {
     if (activeJob) {
       simulateWorkerReply(activeJob.id, currentWorkerId, '0');
+    }
+  };
+
+  const handleSimulateCustom = (textToSend?: string) => {
+    const text = (textToSend !== undefined ? textToSend : customReply).trim();
+    if (activeJob && text) {
+      simulateWorkerReply(activeJob.id, currentWorkerId, text);
+      if (textToSend === undefined) {
+        setCustomReply('');
+      }
     }
   };
 
@@ -159,6 +171,47 @@ export const SMSActivityPanel: React.FC = () => {
             <X className="w-3.5 h-3.5" />
             <span>Simulate Reply: 0</span>
           </button>
+        </div>
+
+        {/* Custom SMS Test Form & QA Edge-Case Inputs */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              value={customReply}
+              onChange={(e) => setCustomReply(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSimulateCustom();
+                }
+              }}
+              placeholder="Test reply (e.g. 2, yes, 1 1, 00)..."
+              className="flex-1 text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-shramik-500 placeholder:text-slate-400"
+            />
+            <button
+              onClick={() => handleSimulateCustom()}
+              disabled={!customReply.trim()}
+              className="px-3 py-1.5 text-xs font-bold bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              Send
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-[10px] text-slate-600">
+            <span className="font-semibold text-slate-500 shrink-0">QA Edge:</span>
+            {['2', 'yes', 'no', 'accept', '1 1', '00', '10'].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => handleSimulateCustom(preset)}
+                className="px-1.5 py-0.5 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 font-mono font-bold transition-colors shrink-0"
+                title={`Send "${preset}" to test validation`}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
         </div>
 
         {currentApplication && (

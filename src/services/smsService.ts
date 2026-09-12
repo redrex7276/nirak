@@ -28,6 +28,7 @@ export interface SMSServiceInterface {
   generateAcceptedSMS(job: SMSTemplateParams, language: LanguageCode): string;
   generateRejectedSMS(job: SMSTemplateParams, language: LanguageCode): string;
   generateAssignedSMS(job: SMSTemplateParams, language: LanguageCode): string;
+  generateInvalidReplySMS(language: LanguageCode): string;
 }
 
 /**
@@ -56,11 +57,11 @@ class MockSMSProvider implements SMSServiceInterface {
   }
 
   parseSMSResponse(text: string): { command: '1' | '0' | 'INVALID'; raw: string } {
-    const cleaned = text.trim();
-    if (cleaned === '1' || cleaned.startsWith('1')) {
+    const cleaned = (text || '').trim();
+    if (cleaned === '1') {
       return { command: '1', raw: cleaned };
     }
-    if (cleaned === '0' || cleaned.startsWith('0')) {
+    if (cleaned === '0') {
       return { command: '0', raw: cleaned };
     }
     return { command: 'INVALID', raw: cleaned };
@@ -89,6 +90,11 @@ class MockSMSProvider implements SMSServiceInterface {
   generateAssignedSMS(job: SMSTemplateParams, language: LanguageCode = 'en'): string {
     const templates = SMS_TEMPLATES[language] || SMS_TEMPLATES.en;
     return templates.assigned(job);
+  }
+
+  generateInvalidReplySMS(language: LanguageCode = 'en'): string {
+    const templates = SMS_TEMPLATES[language] || SMS_TEMPLATES.en;
+    return templates.invalidReply();
   }
 }
 
