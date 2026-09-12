@@ -23,8 +23,27 @@ export const CustomerRegisterPage: React.FC<{ navigate: (r: string) => void }> =
     e.preventDefault();
     setError('');
 
-    if (!name.trim() || !mobile.trim()) {
-      setError('Please fill in your name and mobile number.');
+    if (!name.trim() || name.trim().length < 2) {
+      setError('Please provide your full name (at least 2 characters).');
+      return;
+    }
+
+    const cleanMobile = mobile.replace(/\D/g, '');
+    if (cleanMobile.length < 10) {
+      setError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    if (email.trim()) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email.trim())) {
+        setError('Please enter a valid email address.');
+        return;
+      }
+    }
+
+    if (password && password.length < 6) {
+      setError('Password must be at least 6 characters long.');
       return;
     }
 

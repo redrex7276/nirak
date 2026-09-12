@@ -44,39 +44,101 @@ export const CreateWorkPage: React.FC<{ navigate: (r: string) => void }> = ({ na
   const [paymentAmount, setPaymentAmount] = useState(800);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const validateCurrentStep = (): boolean => {
+    setError('');
+    if (step === 1) {
+      const cleanTitle = title.trim();
+      if (!cleanTitle || cleanTitle.length < 3) {
+        setError('Work title must be at least 3 characters long.');
+        return false;
+      }
+      if (cleanTitle.length > 100) {
+        setError('Work title cannot exceed 100 characters.');
+        return false;
+      }
+    } else if (step === 2) {
+      if (!location.trim()) {
+        setError('Please specify a work location / area.');
+        return false;
+      }
+      if (!startDate.trim()) {
+        setError('Please provide a start date.');
+        return false;
+      }
+      const days = Number(durationDays);
+      if (!days || days < 1 || days > 365 || !Number.isInteger(days)) {
+        setError('Duration must be a whole number between 1 and 365 days.');
+        return false;
+      }
+      if (!reportingTime.trim()) {
+        setError('Please specify a daily reporting time.');
+        return false;
+      }
+    } else if (step === 3) {
+      const reqWorkers = Number(workersRequired);
+      if (!reqWorkers || reqWorkers < 1 || reqWorkers > 1000 || !Number.isInteger(reqWorkers)) {
+        setError('Workers needed must be a whole number between 1 and 1000.');
+        return false;
+      }
+      const exp = Number(experienceRequired);
+      if (isNaN(exp) || exp < 0 || exp > 50 || !Number.isInteger(exp)) {
+        setError('Experience required must be between 0 and 50 years.');
+        return false;
+      }
+    } else if (step === 4) {
+      const amount = Number(paymentAmount);
+      if (!amount || amount < 100 || isNaN(amount)) {
+        setError('Payment amount must be at least ₹100.');
+        return false;
+      }
+    }
+    return true;
+  };
 
   const handleNext = () => {
-    if (step < 5) setStep(step + 1);
+    if (validateCurrentStep()) {
+      if (step < 5) setStep(step + 1);
+    }
   };
 
   const handleBack = () => {
+    setError('');
     if (step > 1) setStep(step - 1);
     else navigate('/customer/dashboard');
   };
 
   const handleCreateWork = async () => {
-    setIsSubmitting(true);
-    const skills = requiredSkill.split(',').map(s => s.trim()).filter(Boolean);
+    if (!validateCurrentStep()) return;
 
-    const created = await createJob({
-      title: title.trim(),
-      category,
-      description: description.trim(),
-      location: location.trim(),
-      startDate: startDate.trim(),
-      durationDays: Number(durationDays),
-      reportingTime: reportingTime.trim(),
-      workersRequired: Number(workersRequired),
-      skills,
-      experienceRequired: Number(experienceRequired),
-      preferredLanguage,
-      paymentType,
-      paymentAmount: Number(paymentAmount)
-    });
+    try {
+      setIsSubmitting(true);
+      setError('');
+      const skills = requiredSkill.split(',').map(s => s.trim()).filter(Boolean);
 
-    setIsSubmitting(false);
-    // Redirect to Job Details where matching candidates and 15 SMS dispatch are shown
-    navigate(`/customer/work/${created.id}`);
+      const created = await createJob({
+        title: title.trim(),
+        category,
+        description: description.trim(),
+        location: location.trim(),
+        startDate: startDate.trim(),
+        durationDays: Number(durationDays),
+        reportingTime: reportingTime.trim(),
+        workersRequired: Number(workersRequired),
+        skills,
+        experienceRequired: Number(experienceRequired),
+        preferredLanguage,
+        paymentType,
+        paymentAmount: Number(paymentAmount)
+      });
+
+      setIsSubmitting(false);
+      navigate(`/customer/work/${created.id}`);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setError(err?.message || 'Failed to create work. Please check the entered fields.');
+    }
   };
 
   return (
@@ -132,6 +194,12 @@ export const CreateWorkPage: React.FC<{ navigate: (r: string) => void }> = ({ na
 
       {/* Wizard Card Container */}
       <div className="soft-box p-8 sm:p-10 border-2 border-slate-200 shadow-tactile">
+        {error && (
+          <div className="mb-6 p-4 rounded-2xl bg-rose-50 border-2 border-rose-200 text-xs font-bold text-rose-700 flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
         
         {/* STEP 1: WHAT WORK DO YOU NEED? */}
         {step === 1 && (
