@@ -37,3 +37,14 @@ service-account*.json
 *.njsproj
 *.sln
 *.sw?
+
+# SQLite Temporary Files
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Tooling
+.claude/
+
+# Firebase cache
+.firebase/
