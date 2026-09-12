@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.tsbuildinfo
+vite.config.ts.timestamp-*
 
 # Environment variables and API credentials
 .env
