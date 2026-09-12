@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole, CustomerProfile, FreelancerProfile, CustomerType, WorkerSkill, LanguageCode } from '../types';
 import { storageService } from '../services/storageService';
+import { firebaseService } from '../services/firebaseService';
 
 interface RegisterCustomerData {
   name: string;
@@ -126,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updated = [newUser, ...users];
     setUsers(updated);
     setCurrentUser(newUser);
+    firebaseService.syncUser(newUser);
     return { success: true, user: newUser };
   };
 
@@ -178,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updated = [newUser, ...users];
     setUsers(updated);
     setCurrentUser(newUser);
+    firebaseService.syncUser(newUser);
     return { success: true, user: newUser };
   };
 

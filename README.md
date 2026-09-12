@@ -91,11 +91,12 @@ The platform implements a strict deterministic state machine:
 ## Tech Stack
 
 - **Frontend Core**: React 18 + TypeScript + Vite 5
+- **Backend & Cloud**: Firebase 11 (App, Authentication, Cloud Firestore Real-Time Database)
 - **Design System & Styling**: Vanilla Tailwind CSS + Custom Soft-Boxy Tactile Design (28–36px radius, deep navy, electric blue, teal, warm amber)
 - **Icons**: Lucide React
 - **Celebration Animations**: Canvas Confetti (zero heavy 3D or WebGL)
 - **Testing**: Vitest 2.x
-- **Storage**: Universal Environment-Safe LocalStorage Adapter with in-memory fallback
+- **Storage**: Universal Environment-Safe LocalStorage Adapter with in-memory fallback & Firebase Cloud Sync
 
 ---
 

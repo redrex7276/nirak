@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { storageService } from '../services/storageService';
 import { smsService, evaluateSMSStateTransition } from '../services/smsService';
+import { firebaseService } from '../services/firebaseService';
 import { useAuth } from './AuthContext';
 
 interface CreateJobParams {
@@ -150,6 +151,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updated = [newJob, ...jobs];
     setJobs(updated);
+    firebaseService.syncJob(newJob);
     addToast('Work Created Successfully', `Created "${newJob.title}" in ${newJob.location}`, 'success');
     return newJob;
   };
@@ -214,15 +216,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setSmsMessages(prev => [...newSMSList, ...prev]);
 
+    // Sync to Firebase backend in background
+    newApps.forEach(a => firebaseService.syncApplication(a));
+    newSMSList.forEach(m => firebaseService.syncSMSMessage(m));
+
     // Update job state
     setJobs(prev => prev.map(j => {
       if (j.id === jobId) {
         const unionNotified = Array.from(new Set([...j.notifiedWorkerIds, ...workerIds]));
-        return {
+        const updated = {
           ...j,
-          status: 'sms_sent',
+          status: 'sms_sent' as const,
           notifiedWorkerIds: unionNotified
         };
+        firebaseService.syncJob(updated);
+        return updated;
       }
       return j;
     }));
@@ -360,6 +368,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setSmsMessages(prev => [outgoingReply, incomingSMS, ...prev]);
 
+    // Sync SMS logs to Firebase backend
+    firebaseService.syncSMSMessage(incomingSMS);
+    firebaseService.syncSMSMessage(outgoingReply);
+
     if (nextStatus === 'details_requested') {
       addToast(`${workerName} Requested Full Details`, 'System delivered job terms over SMS.', 'info');
     } else if (nextStatus === 'accepted') {
@@ -407,11 +419,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setJobs(prev => prev.map(j => {
       if (j.id === jobId) {
         const assigned = Array.from(new Set([...j.assignedWorkerIds, workerId]));
-        return {
+        const updated = {
           ...j,
-          status: 'assigned',
+          status: 'assigned' as const,
           assignedWorkerIds: assigned
         };
+        firebaseService.syncJob(updated);
+        return updated;
       }
       return j;
     }));
@@ -439,6 +453,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     setSmsMessages(prev => [sms, ...prev]);
+    firebaseService.syncSMSMessage(sms);
 
     addToast(
       `Worker Assigned: ${workerName}`,
@@ -497,6 +512,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setWorkHistory(prev => [...newHistoryItems, ...prev]);
 
+    // Sync work history to Firebase backend
+    newHistoryItems.forEach(h => firebaseService.syncWorkHistory(h));
+
     // Update applications to completed
     setApplications(prev => prev.map(a => {
       if (a.jobId === jobId && assignedIds.includes(a.workerId)) {
@@ -512,11 +530,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Update job to completed
     setJobs(prev => prev.map(j => {
       if (j.id === jobId) {
-        return {
+        const updated = {
           ...j,
-          status: 'completed',
+          status: 'completed' as const,
           completedWorkerIds: assignedIds
         };
+        firebaseService.syncJob(updated);
+        return updated;
       }
       return j;
     }));
