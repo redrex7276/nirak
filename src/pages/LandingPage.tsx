@@ -11,16 +11,19 @@ import {
   MapPin, 
   Clock, 
   Sparkles,
-  Zap
+  Zap,
+  Bot
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { UI_TRANSLATIONS, SMS_TEMPLATES } from '../locales/translations';
 import { LanguageCode } from '../types';
+import { RobotMascot } from '../components/mascot/RobotMascot';
 
 export const LandingPage: React.FC<{ navigate: (r: string) => void }> = ({ navigate }) => {
   const { language } = useApp();
   const t = UI_TRANSLATIONS[language] || UI_TRANSLATIONS.en;
   const [activePreviewLang, setActivePreviewLang] = useState<LanguageCode>(language);
+  const [heroVisualTab, setHeroVisualTab] = useState<'mascot' | 'flow'>('mascot');
 
   const sampleSMSParams = {
     title: activePreviewLang === 'mr' ? 'पेंटिंगचे काम' : activePreviewLang === 'hi' ? 'पेंटिंग का काम' : 'Painting Project',
@@ -89,97 +92,146 @@ export const LandingPage: React.FC<{ navigate: (r: string) => void }> = ({ navig
             </div>
           </div>
 
-          {/* Right Hero Visual Composition (2D Elegant Flow Diagram) */}
+          {/* Right Hero Visual Composition: Interactive 3D Mascot / 2D Flow Toggle */}
           <div className="lg:col-span-5">
-            <div className="soft-box-navy p-6 sm:p-8 rounded-card-lg relative shadow-2xl border-slate-800">
-              <div className="flex items-center justify-between pb-4 border-b border-navy-800 mb-6">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  The Shramik Opportunity Bridge
-                </span>
-                <span className="text-[11px] font-mono text-slate-400">Deterministic 2D Flow</span>
-              </div>
-
-              {/* 5-Stage Diagram */}
-              <div className="space-y-3 relative">
-                {/* Node 1 */}
-                <div className="bg-navy-900/90 border border-slate-700/80 p-3.5 rounded-2xl flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-shramik-600/30 text-shramik-400 flex items-center justify-center font-bold text-sm shrink-0">
-                    <Briefcase className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-bold text-white">1. Customer Creates Work</div>
-                    <div className="text-[11px] text-slate-400">Painting Project • Mapusa • ₹800/day</div>
-                  </div>
-                  <span className="text-[10px] uppercase font-bold text-shramik-300 bg-shramik-950 px-2 py-0.5 rounded">Web Portal</span>
+            <div className="soft-box-navy p-6 sm:p-7 rounded-card-lg relative shadow-2xl border-slate-800 flex flex-col justify-between">
+              
+              {/* Header with Visual Mode Toggle */}
+              <div className="flex items-center justify-between pb-4 border-b border-navy-800 mb-4 gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]"></span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                    {heroVisualTab === 'mascot' ? 'Live 3D Site Mascot' : 'The Shramik Opportunity Bridge'}
+                  </span>
                 </div>
 
-                <div className="flex justify-center -my-1 text-slate-500">
-                  <div className="w-0.5 h-4 bg-slate-700"></div>
-                </div>
+                {/* View Switcher Pills */}
+                <div className="flex items-center bg-navy-950/80 p-1 rounded-xl border border-slate-800">
+                  <button
+                    onClick={() => setHeroVisualTab('mascot')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all ${
+                      heroVisualTab === 'mascot'
+                        ? 'bg-shramik-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Bot className="w-3.5 h-3.5" />
+                    <span>3D Mascot</span>
+                  </button>
 
-                {/* Node 2 */}
-                <div className="bg-navy-900/90 border border-slate-700/80 p-3.5 rounded-2xl flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-sm shrink-0">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-bold text-white">2. Shramik Matching Engine</div>
-                    <div className="text-[11px] text-slate-400">27 Verified Local Painters Matched</div>
-                  </div>
-                  <span className="text-[10px] uppercase font-bold text-teal-300 bg-teal-950 px-2 py-0.5 rounded">Scored Match</span>
-                </div>
-
-                <div className="flex justify-center -my-1 text-slate-500">
-                  <div className="w-0.5 h-4 bg-slate-700"></div>
-                </div>
-
-                {/* Node 3 (SMS Dispatch) */}
-                <div className="bg-amber-400/10 border-2 border-amber-400/40 p-3.5 rounded-2xl flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-400 text-navy-950 flex items-center justify-center font-bold text-sm shrink-0">
-                    <Smartphone className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-bold text-amber-300">3. Direct SMS To Freelancers</div>
-                    <div className="text-[11px] text-slate-300">Delivered over cellular network</div>
-                  </div>
-                  <span className="text-[10px] uppercase font-bold text-amber-300 bg-amber-950 px-2 py-0.5 rounded">Zero Data</span>
-                </div>
-
-                <div className="flex justify-center -my-1 text-slate-500">
-                  <div className="w-0.5 h-4 bg-slate-700"></div>
-                </div>
-
-                {/* Node 4 (Reply) */}
-                <div className="bg-navy-900/90 border border-slate-700/80 p-3.5 rounded-2xl flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-sm shrink-0">
-                    <MessageSquare className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-bold text-white">4. Worker Numeric Replies</div>
-                    <div className="text-[11px] text-slate-400">Reply 1 = Details • Reply 1 = Accept</div>
-                  </div>
-                  <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded">Instant</span>
-                </div>
-
-                <div className="flex justify-center -my-1 text-slate-500">
-                  <div className="w-0.5 h-4 bg-slate-700"></div>
-                </div>
-
-                {/* Node 5 */}
-                <div className="bg-navy-900/90 border border-slate-700/80 p-3.5 rounded-2xl flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold text-sm shrink-0">
-                    <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-bold text-white">5. Assignment & Work History</div>
-                    <div className="text-[11px] text-slate-400">Experience & verified ratings recorded</div>
-                  </div>
-                  <span className="text-[10px] uppercase font-bold text-blue-300 bg-blue-950 px-2 py-0.5 rounded">Reputation</span>
+                  <button
+                    onClick={() => setHeroVisualTab('flow')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all ${
+                      heroVisualTab === 'flow'
+                        ? 'bg-shramik-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Workflow</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-navy-800 text-center">
+              {/* View 1: 3D Robot Mascot */}
+              {heroVisualTab === 'mascot' ? (
+                <div className="space-y-4">
+                  <div className="relative rounded-2xl bg-gradient-to-b from-slate-900/60 to-navy-950/90 border border-slate-700/60 overflow-hidden shadow-inner">
+                    <RobotMascot className="w-full h-[360px]" showBadge={false} interactiveHint={true} />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-400 px-1 pt-1">
+                    <span className="flex items-center gap-1.5 font-medium text-slate-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                      Real-Time Cursor Tracking
+                    </span>
+                    <span className="text-[11px] text-amber-300 font-semibold">
+                      Click robot to wave!
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* View 2: 5-Stage Diagram */
+                <div className="space-y-3 relative">
+                  {/* Node 1 */}
+                  <div className="bg-navy-900/90 border border-slate-700/80 p-3 rounded-2xl flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-shramik-600/30 text-shramik-400 flex items-center justify-center font-bold text-xs shrink-0">
+                      <Briefcase className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs font-bold text-white">1. Customer Creates Work</div>
+                      <div className="text-[11px] text-slate-400">Painting Project • Mapusa • ₹800/day</div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-shramik-300 bg-shramik-950 px-2 py-0.5 rounded">Web</span>
+                  </div>
+
+                  <div className="flex justify-center -my-1 text-slate-500">
+                    <div className="w-0.5 h-3 bg-slate-700"></div>
+                  </div>
+
+                  {/* Node 2 */}
+                  <div className="bg-navy-900/90 border border-slate-700/80 p-3 rounded-2xl flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-xs shrink-0">
+                      <Users className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs font-bold text-white">2. Shramik Matching Engine</div>
+                      <div className="text-[11px] text-slate-400">27 Verified Local Painters Matched</div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-teal-300 bg-teal-950 px-2 py-0.5 rounded">Match</span>
+                  </div>
+
+                  <div className="flex justify-center -my-1 text-slate-500">
+                    <div className="w-0.5 h-3 bg-slate-700"></div>
+                  </div>
+
+                  {/* Node 3 */}
+                  <div className="bg-amber-400/10 border-2 border-amber-400/40 p-3 rounded-2xl flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-400 text-navy-950 flex items-center justify-center font-bold text-xs shrink-0">
+                      <Smartphone className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs font-bold text-amber-300">3. Direct Cellular SMS</div>
+                      <div className="text-[11px] text-slate-300">Sent to worker mobile phone</div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-amber-300 bg-amber-950 px-2 py-0.5 rounded">Zero Data</span>
+                  </div>
+
+                  <div className="flex justify-center -my-1 text-slate-500">
+                    <div className="w-0.5 h-3 bg-slate-700"></div>
+                  </div>
+
+                  {/* Node 4 */}
+                  <div className="bg-navy-900/90 border border-slate-700/80 p-3 rounded-2xl flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-xs shrink-0">
+                      <MessageSquare className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs font-bold text-white">4. Numeric Worker Reply</div>
+                      <div className="text-[11px] text-slate-400">Reply 1 = Details • Reply 1 = Accept</div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-950 px-2 py-0.5 rounded">Instant</span>
+                  </div>
+
+                  <div className="flex justify-center -my-1 text-slate-500">
+                    <div className="w-0.5 h-3 bg-slate-700"></div>
+                  </div>
+
+                  {/* Node 5 */}
+                  <div className="bg-navy-900/90 border border-slate-700/80 p-3 rounded-2xl flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold text-xs shrink-0">
+                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs font-bold text-white">5. Hired Crew & History</div>
+                      <div className="text-[11px] text-slate-400">Assignment & verified experience stored</div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-blue-300 bg-blue-950 px-2 py-0.5 rounded">Reputation</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-5 pt-3 border-t border-navy-800 text-center">
                 <p className="text-xs text-amber-300 font-bold">
                   "Your skills should not depend on your internet connection."
                 </p>
