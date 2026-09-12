@@ -43,13 +43,13 @@ export const FreelancerDashboard: React.FC<{ navigate: (r: string) => void }> = 
   const activeWork = myApplications.filter(a => a.status === 'assigned');
   const completedWork = myApplications.filter(a => a.status === 'completed');
 
-  // Completed jobs count: baseline 126 + newly completed
-  const newCompletions = myWorkHistory.filter(h => !['WH-801', 'WH-802', 'WH-803'].includes(h.id)).length;
-  const jobsCompletedCount = (profile.jobsCompleted && profile.jobsCompleted > 126) 
-    ? profile.jobsCompleted 
-    : (126 + newCompletions);
+  // Completed jobs count: dynamic based on profile and history
+  const jobsCompletedCount = profile.jobsCompleted ?? myWorkHistory.length;
 
-  const currentRating = newCompletions > 0 ? 5.0 : profile.rating;
+  // Average rating calculated dynamically
+  const currentRating = myWorkHistory.length > 0 
+    ? (myWorkHistory.reduce((acc, curr) => acc + curr.rating, 0) / myWorkHistory.length).toFixed(1)
+    : (profile.rating ? profile.rating.toFixed(1) : '5.0');
 
   // Total earnings estimate
   const totalEarned = myWorkHistory.reduce((acc, curr) => acc + curr.earnedAmount, 0);
@@ -120,7 +120,7 @@ export const FreelancerDashboard: React.FC<{ navigate: (r: string) => void }> = 
         <div className="soft-box p-6 border-l-4 border-l-emerald-500">
           <span className="text-xs font-bold uppercase text-slate-400">TOTAL RECORDED EARNINGS</span>
           <div className="text-3xl font-black text-emerald-800 font-display mt-1">
-            ₹{totalEarned > 0 ? totalEarned.toLocaleString('en-IN') : '14,400'}
+            ₹{totalEarned.toLocaleString('en-IN')}
           </div>
           <p className="text-xs text-slate-500 mt-1">Disbursed for completed assignments</p>
         </div>

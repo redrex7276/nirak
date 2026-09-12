@@ -24,11 +24,10 @@ export const FreelancerProfilePage: React.FC<{ navigate: (r: string) => void }> 
 
   const workerId = currentUser?.id || 'SQ-F-1042';
   const myWorkHistory = workHistory.filter(h => h.workerId === workerId);
-  const newCompletions = myWorkHistory.filter(h => !['WH-801', 'WH-802', 'WH-803'].includes(h.id)).length;
-  const jobsCompletedCount = (profile.jobsCompleted && profile.jobsCompleted > 126) 
-    ? profile.jobsCompleted 
-    : (126 + newCompletions);
-  const currentRating = newCompletions > 0 ? 5.0 : profile.rating;
+  const jobsCompletedCount = profile.jobsCompleted ?? myWorkHistory.length;
+  const currentRating = myWorkHistory.length > 0 
+    ? (myWorkHistory.reduce((acc, curr) => acc + curr.rating, 0) / myWorkHistory.length).toFixed(1)
+    : (profile.rating ? profile.rating.toFixed(1) : '5.0');
 
   const [name, setName] = useState(currentUser?.name || 'Ramesh Naik');
   const [primarySkill, setPrimarySkill] = useState<WorkerSkill>(profile.primarySkill);

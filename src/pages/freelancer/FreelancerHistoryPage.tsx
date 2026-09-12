@@ -10,17 +10,12 @@ export const FreelancerHistoryPage: React.FC<{ navigate: (r: string) => void }> 
   const workerId = currentUser?.id || 'SQ-F-1042';
   const profile = currentUser?.freelancerProfile;
   const myHistory = workHistory.filter(h => h.workerId === workerId);
-  const newCompletions = myHistory.filter(h => !['WH-801', 'WH-802', 'WH-803'].includes(h.id)).length;
-  const jobsCompletedCount = (profile?.jobsCompleted && profile.jobsCompleted > 126) 
-    ? profile.jobsCompleted 
-    : (126 + newCompletions);
+  const jobsCompletedCount = profile?.jobsCompleted ?? myHistory.length;
 
   const totalEarned = myHistory.reduce((acc, h) => acc + h.earnedAmount, 0);
-  const avgRating = newCompletions > 0 
-    ? '5.0'
-    : myHistory.length > 0 
+  const avgRating = myHistory.length > 0 
     ? (myHistory.reduce((acc, h) => acc + h.rating, 0) / myHistory.length).toFixed(1)
-    : profile?.rating || 4.8;
+    : (profile?.rating ? profile.rating.toFixed(1) : '5.0');
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -57,7 +52,7 @@ export const FreelancerHistoryPage: React.FC<{ navigate: (r: string) => void }> 
         <div className="soft-box p-6 border-l-4 border-l-emerald-500">
           <span className="text-xs font-bold uppercase text-slate-400">RECORDED EARNINGS</span>
           <div className="text-3xl font-black text-emerald-800 font-display mt-1">
-            ₹{totalEarned > 0 ? totalEarned.toLocaleString('en-IN') : '10,400'}
+            ₹{totalEarned.toLocaleString('en-IN')}
           </div>
           <p className="text-xs text-slate-500 mt-1">Total pay from recorded gig contracts</p>
         </div>
