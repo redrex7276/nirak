@@ -1,10 +1,30 @@
 {
   "hosting": {
-    "public": "y",
+    "public": "dist",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=31536000, immutable"
+          }
+        ]
+      }
     ],
     "rewrites": [
       {
@@ -12,5 +32,20 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "authorizedDomains": [
+      "localhost",
+      "shramik-quote.web.app",
+      "shramik-quote.firebaseapp.com"
+    ],
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": true
+    }
   }
 }

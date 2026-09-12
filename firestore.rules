@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matching request.auth.uid)
+    // Fields:
+    //   - id: string (required, immutable) - Unique User ID or SQ-C/SQ-F identifier
+    //   - role: string (required, immutable) - 'customer' or 'freelancer'
+    //   - name: string (required, length: 2-100) - Full Name
+    //   - mobile: string (required, length: 10-20) - Contact phone number
+    //   - email: string (optional, length: 5-100) - Email address
+    //   - location: string (required, length: 2-100) - City or region
+    //   - createdAt: string or timestamp (required, immutable) - Registration date
+    //   - customerProfile: map (optional, allowed keys: customerType, businessName, cityArea)
+    //   - freelancerProfile: map (optional, contains skills, experience, language, availability, etc.)
+    //
+    // Collection: jobs
+    // Document ID: {jobId}
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - customerId: string (required, immutable) - ID of customer posting job
+    //   - title: string (required, length: 3-200)
+    //   - skillCategory: string (required, length: 2-100)
+    //   - location: string (required, length: 2-100)
+    //   - duration: string (required, length: 1-100)
+    //   - budget: number (required, > 0)
+    //   - description: string (required, length: 5-2000)
+    //   - status: string (required, in ['open', 'in_progress', 'completed', 'cancelled'])
+    //   - createdAt: string or timestamp (required, immutable)
+    //
+    // Collection: applications
+    // Document ID: {applicationId}
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - jobId: string (required, immutable)
+    //   - freelancerId: string (required, immutable)
+    //   - status: string (required, in ['sent', 'shortlisted', 'accepted', 'rejected'])
+    //   - appliedAt: string or timestamp (required, immutable)
+    //
+    // Collection: sms_logs
+    // Document ID: {logId}
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - recipientMobile: string (required, length: 10-20)
+    //   - message: string (required, length: 1-1000)
+    //   - status: string (required, length: 1-50)
+    //   - timestamp: string or timestamp (required)
+    //
+    // ===============================================================
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && (
+        (resource.data.customerId == request.auth.uid) ||
+        (resource.data.userId == request.auth.uid) ||
+        (resource.data.freelancerId == request.auth.uid)
+      );
+    }
+
+    function isValidUser(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+             data.mobile is string && data.mobile.size() >= 10 && data.mobile.size() <= 25 &&
+             data.role in ['customer', 'freelancer'] &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 100));
+    }
+
+    function isValidJob(data) {
+      return data.title is string && data.title.size() >= 3 && data.title.size() <= 200 &&
+             data.skillCategory is string && data.skillCategory.size() <= 100 &&
+             data.location is string && data.location.size() <= 100 &&
+             data.budget is number && data.budget >= 0 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.status in ['open', 'in_progress', 'completed', 'cancelled'];
+    }
+
+    function isValidApplication(data) {
+      return data.jobId is string && data.jobId.size() > 0 &&
+             data.freelancerId is string && data.freelancerId.size() > 0 &&
+             data.status in ['sent', 'shortlisted', 'accepted', 'rejected'];
+    }
+
+    function isValidSMSLog(data) {
+      return data.recipientMobile is string && data.recipientMobile.size() >= 10 &&
+             data.message is string && data.message.size() <= 1000;
+    }
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users collection: Private PII data - strictly owner-only access
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) &&
+                      request.resource.data.role == resource.data.role;
+      allow delete: if isOwner(userId);
+    }
+
+    // Jobs collection: authenticated users can read open jobs; customers can manage their own jobs
+    match /jobs/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidJob(request.resource.data) &&
+                      (request.resource.data.customerId == request.auth.uid ||
+                       !('customerId' in request.resource.data));
+      allow update: if isAuthenticated() && isValidJob(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.customerId == request.auth.uid;
+    }
+
+    // Applications collection
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidApplication(request.resource.data);
+      allow update: if isAuthenticated() && isValidApplication(request.resource.data);
+      allow delete: if isAuthenticated();
+    }
+
+    // SMS logs collection: Internal audit log accessible to authenticated users
+    match /sms_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidSMSLog(request.resource.data);
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Work history collection
+    match /work_history/{historyId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if false;
+    }
+
+    // Quotes collection: motivational quotes with vector embeddings
+    match /quotes/{quoteId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAuthenticated();
+    }
+  }
+}
