@@ -6,7 +6,7 @@ import { WorkerSkill, LanguageCode, WorkerAvailability } from '../../types';
 
 export const FreelancerProfilePage: React.FC<{ navigate: (r: string) => void }> = ({ navigate }) => {
   const { currentUser, updateFreelancerProfile } = useAuth();
-  const { addToast } = useApp();
+  const { addToast, workHistory } = useApp();
 
   const profile = currentUser?.freelancerProfile || {
     freelancerId: 'SQ-F-1042',
@@ -21,6 +21,14 @@ export const FreelancerProfilePage: React.FC<{ navigate: (r: string) => void }> 
     dailyRate: 800,
     bio: 'Experienced master painter with 8+ years across North Goa.'
   };
+
+  const workerId = currentUser?.id || 'SQ-F-1042';
+  const myWorkHistory = workHistory.filter(h => h.workerId === workerId);
+  const newCompletions = myWorkHistory.filter(h => !['WH-801', 'WH-802', 'WH-803'].includes(h.id)).length;
+  const jobsCompletedCount = (profile.jobsCompleted && profile.jobsCompleted > 126) 
+    ? profile.jobsCompleted 
+    : (126 + newCompletions);
+  const currentRating = newCompletions > 0 ? 5.0 : profile.rating;
 
   const [name, setName] = useState(currentUser?.name || 'Ramesh Naik');
   const [primarySkill, setPrimarySkill] = useState<WorkerSkill>(profile.primarySkill);
@@ -81,7 +89,7 @@ export const FreelancerProfilePage: React.FC<{ navigate: (r: string) => void }> 
                 </span>
                 <span className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200">
                   <Star className="w-3.5 h-3.5 fill-amber-400" />
-                  <span>★ {profile.rating}</span>
+                  <span>★ {currentRating}</span>
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-navy-900 font-display">
@@ -258,7 +266,7 @@ export const FreelancerProfilePage: React.FC<{ navigate: (r: string) => void }> 
           </form>
         ) : (
           <div className="pt-6 space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs">
               <div>
                 <span className="text-slate-400 text-[10px] block">Primary Trade:</span>
                 <strong className="text-shramik-700 text-sm">{primarySkill}</strong>
@@ -266,6 +274,10 @@ export const FreelancerProfilePage: React.FC<{ navigate: (r: string) => void }> 
               <div>
                 <span className="text-slate-400 text-[10px] block">Experience:</span>
                 <strong className="text-slate-800 text-sm">{experienceYears} Years</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 text-[10px] block">Jobs Completed:</span>
+                <strong className="text-emerald-700 text-sm font-black">{jobsCompletedCount} Jobs</strong>
               </div>
               <div>
                 <span className="text-slate-400 text-[10px] block">Registered Location:</span>

@@ -33,6 +33,7 @@ interface AuthContextType {
   registerFreelancer: (data: RegisterFreelancerData) => Promise<{ success: boolean; user?: User; error?: string }>;
   updateCustomerProfile: (profile: Partial<CustomerProfile>, name?: string, location?: string) => void;
   updateFreelancerProfile: (profile: Partial<FreelancerProfile>, name?: string, location?: string) => void;
+  updateAnyWorkerProfile: (workerId: string, profile: Partial<FreelancerProfile>) => void;
   switchDemoUser: (userId: string) => void;
 }
 
@@ -177,6 +178,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
   };
 
+  const updateAnyWorkerProfile = (workerId: string, profile: Partial<FreelancerProfile>) => {
+    setUsers(prevUsers => prevUsers.map(u => {
+      if (u.id === workerId || u.freelancerProfile?.freelancerId === workerId) {
+        const updatedWorker = {
+          ...u,
+          freelancerProfile: {
+            ...u.freelancerProfile!,
+            ...profile
+          }
+        };
+        if (currentUser?.id === u.id || currentUser?.freelancerProfile?.freelancerId === workerId) {
+          setCurrentUser(updatedWorker);
+        }
+        return updatedWorker;
+      }
+      return u;
+    }));
+  };
+
   const switchDemoUser = (userId: string) => {
     const target = users.find(u => u.id === userId);
     if (target) {
@@ -195,6 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         registerFreelancer,
         updateCustomerProfile,
         updateFreelancerProfile,
+        updateAnyWorkerProfile,
         switchDemoUser
       }}
     >

@@ -59,7 +59,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { users, currentUser, updateFreelancerProfile } = useAuth();
+  const { users, currentUser, updateFreelancerProfile, updateAnyWorkerProfile } = useAuth();
 
   const [jobs, setJobs] = useState<Job[]>(() => storageService.getJobs());
   const [applications, setApplications] = useState<JobApplication[]>(() => storageService.getApplications());
@@ -438,10 +438,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       newHistoryItems.push(historyItem);
 
-      // If this worker is currently logged in as a freelancer or in users list, update jobs completed
+      // If this worker is in users list, update jobs completed
       if (workerUser?.freelancerProfile) {
         const newCount = (workerUser.freelancerProfile.jobsCompleted || 0) + 1;
-        updateFreelancerProfile({
+        updateAnyWorkerProfile(workerId, {
           jobsCompleted: newCount,
           rating: 5.0
         });
