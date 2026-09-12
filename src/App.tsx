@@ -88,6 +88,75 @@ function RouterShell() {
       return <HowItWorksPage navigate={navigate} />;
     }
 
+    // Route protection enforcement
+    if (isCustomerRoute) {
+      if (!currentUser) {
+        return (
+          <LoginPage 
+            navigate={navigate} 
+            redirectNotice="Authentication Required: Please log in as a Customer to access this page." 
+          />
+        );
+      }
+      if (currentUser.role !== 'customer') {
+        return (
+          <div className="max-w-md mx-auto px-4 py-16 text-center">
+            <div className="soft-box p-8 border-2 border-rose-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
+                Access Restricted
+              </span>
+              <h2 className="text-2xl font-extrabold text-navy-900 mt-3 font-display">
+                Customer Role Required
+              </h2>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                You are currently signed in as <strong>{currentUser.name}</strong> (Freelancer). Customer workspaces are reserved for customers and contractors.
+              </p>
+              <button
+                onClick={() => navigate('/freelancer/dashboard')}
+                className="tactile-btn-primary w-full py-3.5 text-xs font-bold shadow-tactile mt-6"
+              >
+                Go to Freelancer Workspace
+              </button>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    if (isFreelancerRoute) {
+      if (!currentUser) {
+        return (
+          <LoginPage 
+            navigate={navigate} 
+            redirectNotice="Authentication Required: Please log in as a Freelancer to access your workspace." 
+          />
+        );
+      }
+      if (currentUser.role !== 'freelancer') {
+        return (
+          <div className="max-w-md mx-auto px-4 py-16 text-center">
+            <div className="soft-box p-8 border-2 border-amber-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                Access Restricted
+              </span>
+              <h2 className="text-2xl font-extrabold text-navy-900 mt-3 font-display">
+                Freelancer Workspace
+              </h2>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                You are currently signed in as <strong>{currentUser.name}</strong> (Customer). This area is reserved for registered freelancers.
+              </p>
+              <button
+                onClick={() => navigate('/customer/dashboard')}
+                className="tactile-btn-primary w-full py-3.5 text-xs font-bold shadow-tactile mt-6"
+              >
+                Go to Customer Dashboard
+              </button>
+            </div>
+          </div>
+        );
+      }
+    }
+
     // Customer routes
     if (currentRoute === '/customer/dashboard' || currentRoute === '/customer/work') {
       return <CustomerDashboard navigate={navigate} />;

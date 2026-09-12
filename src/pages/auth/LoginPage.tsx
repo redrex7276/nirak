@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { ArrowLeft, Lock, Phone, Mail, ArrowRight, UserCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-export const LoginPage: React.FC<{ navigate: (r: string) => void }> = ({ navigate }) => {
+export const LoginPage: React.FC<{ navigate: (r: string) => void; redirectNotice?: string }> = ({ navigate, redirectNotice }) => {
   const { login } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(redirectNotice || '');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {

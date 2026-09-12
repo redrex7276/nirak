@@ -71,10 +71,8 @@ export const storageService = {
 
   getCurrentUser(): User | null {
     const data = safeGet(STORAGE_KEYS.CURRENT_USER);
-    if (!data) {
-      // Default to Rajesh Sharma (Customer) for quick preview, or null
-      const users = this.getUsers();
-      return users.find(u => u.id === 'SQ-C-201') || users[0] || null;
+    if (!data || data === 'null') {
+      return null;
     }
     try {
       return JSON.parse(data);

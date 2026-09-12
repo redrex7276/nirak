@@ -78,24 +78,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerCustomer = async (data: RegisterCustomerData) => {
-    const existing = users.find(u => u.mobile.replace(/\s+/g, '') === data.mobile.replace(/\s+/g, ''));
-    if (existing) {
+    if (!data.name || data.name.trim().length < 2) {
+      return { success: false, error: 'Full name must be at least 2 characters.' };
+    }
+
+    const cleanMobile = data.mobile.replace(/\D/g, '');
+    if (cleanMobile.length < 10) {
+      return { success: false, error: 'Please enter a valid 10-digit mobile number.' };
+    }
+
+    const existingMobile = users.find(u => u.mobile.replace(/\s+/g, '') === data.mobile.replace(/\s+/g, ''));
+    if (existingMobile) {
       return { success: false, error: 'Mobile number already registered. Please login.' };
+    }
+
+    if (data.email && data.email.trim()) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(data.email.trim())) {
+        return { success: false, error: 'Please enter a valid email address.' };
+      }
+      const existingEmail = users.find(u => u.email && u.email.toLowerCase() === data.email!.trim().toLowerCase());
+      if (existingEmail) {
+        return { success: false, error: 'Email address already registered. Please login.' };
+      }
+    }
+
+    if (data.password && data.password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
     }
 
     const newId = `SQ-C-${Math.floor(100 + Math.random() * 900)}`;
     const newUser: User = {
       id: newId,
       role: 'customer',
-      name: data.name,
-      mobile: data.mobile,
-      email: data.email,
-      location: data.location,
+      name: data.name.trim(),
+      mobile: data.mobile.trim(),
+      email: data.email?.trim(),
+      location: data.location.trim(),
       createdAt: new Date().toISOString(),
       customerProfile: {
         customerType: data.customerType,
-        businessName: data.businessName,
-        cityArea: data.location
+        businessName: data.businessName?.trim(),
+        cityArea: data.location.trim()
       }
     };
 
@@ -106,32 +130,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerFreelancer = async (data: RegisterFreelancerData) => {
+    if (!data.name || data.name.trim().length < 2) {
+      return { success: false, error: 'Full name must be at least 2 characters.' };
+    }
+
+    const cleanMobile = data.mobile.replace(/\D/g, '');
+    if (cleanMobile.length < 10) {
+      return { success: false, error: 'Please enter a valid 10-digit mobile number.' };
+    }
+
     const existing = users.find(u => u.mobile.replace(/\s+/g, '') === data.mobile.replace(/\s+/g, ''));
     if (existing) {
       return { success: false, error: 'Mobile number already registered. Please login.' };
+    }
+
+    if (data.password && data.password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
     }
 
     const freelancerId = `SQ-F-${Math.floor(1000 + Math.random() * 9000)}`;
     const newUser: User = {
       id: freelancerId,
       role: 'freelancer',
-      name: data.name,
-      mobile: data.mobile,
-      location: data.location,
+      name: data.name.trim(),
+      mobile: data.mobile.trim(),
+      location: data.location.trim(),
       createdAt: new Date().toISOString(),
       freelancerProfile: {
         freelancerId: freelancerId,
         primarySkill: data.primarySkill,
         additionalSkills: data.additionalSkills,
         experienceYears: data.experienceYears,
-        location: data.location,
+        location: data.location.trim(),
         preferredLanguage: data.preferredLanguage,
         availability: data.availability,
         rating: 5.0,
         jobsCompleted: 0,
         dailyRate: 800,
         bio: `Skilled ${data.primarySkill} in ${data.location} with ${data.experienceYears} years experience.`,
-        serviceAreas: [data.location],
+        serviceAreas: [data.location.trim()],
         certifications: [],
         verified: true,
         avatarBg: 'from-blue-600 to-indigo-700'
