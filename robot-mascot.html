@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shramik Bot — 3D Construction Mascot (Three.js)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, #ffffff 0%, #f1f5f9 60%, #e2e8f0 100%);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      color: #0f172a;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* UI Overlay */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2rem;
+    }
+
+    .header-card {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+      border-radius: 20px;
+      padding: 1.25rem 1.75rem;
+      max-width: 440px;
+      animation: fadeInDown 0.8s ease-out;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #ea580c;
+      background: #fff7ed;
+      border: 1px solid #ffedd5;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      margin-bottom: 0.5rem;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      background: #06b6d4;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #06b6d4;
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+    }
+
+    p {
+      font-size: 0.84rem;
+      color: #64748b;
+      line-height: 1.45;
+    }
+
+    .footer-hint {
+      pointer-events: auto;
+      align-self: center;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      color: #f8fafc;
+      padding: 0.65rem 1.4rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .mouse-icon {
+      width: 14px;
+      height: 20px;
+      border: 2px solid #38bdf8;
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .mouse-icon::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 4px;
+      background: #38bdf8;
+      border-radius: 1px;
+      animation: scrollWheel 1.6s infinite ease-in-out;
+    }
+
+    @keyframes scrollWheel {
+      0%, 100% { transform: translate(-50%, 0); opacity: 1; }
+      60% { transform: translate(-50%, 5px); opacity: 0.2; }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .ui-layer { padding: 1rem; }
+      .header-card { max-width: 100%; padding: 1rem; }
+      h1 { font-size: 1.15rem; }
+    }
+  </style>
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- WebGL Render Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- UI Overlay -->
+  <div class="ui-layer">
+    <div class="header-card">
+      <div class="badge">
+        <div class="badge-dot"></div>
+        <span>SHRAMIK-QUOTE • 3D MASCOT</span>
+      </div>
+      <h1>Shramik Bot</h1>
+      <p>Low-poly construction safety bot with real-time cursor tracking, smooth angular interpolation, and idle floating mechanics.</p>
+    </div>
+
+    <div class="footer-hint">
+      <div class="mouse-icon"></div>
+      <span>Move cursor to track • Click anywhere to wave</span>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. THREE.JS SCENE SETUP
+    // =========================================================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+
+    // Perspective Camera
+    const camera = new THREE.PerspectiveCamera(
+      42,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+    camera.position.set(0, 0.5, 6.2);
+
+    // WebGL Renderer with High-DPI and soft shadows
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    container.appendChild(renderer.domElement);
+
+    // =========================================================================
+    // 2. SOFT ENVIRONMENT LIGHTING
+    // =========================================================================
+    // Ambient light: Soft warm fill
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    scene.add(ambientLight);
+
+    // Hemisphere light: Sky blue from above, warm earth from ground
+    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0xffedd5, 0.45);
+    scene.add(hemiLight);
+
+    // Key Directional Light with soft shadows
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+    dirLight.position.set(4, 7, 5);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 20;
+    dirLight.shadow.camera.left = -3;
+    dirLight.shadow.camera.right = 3;
+    dirLight.shadow.camera.top = 3;
+    dirLight.shadow.camera.bottom = -3;
+    dirLight.shadow.bias = -0.001;
+    scene.add(dirLight);
+
+    // Rim/Back light for depth separation
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
+    rimLight.position.set(-4, 3, -4);
+    scene.add(rimLight);
+
+    // Front soft fill
+    const fillLight = new THREE.PointLight(0xffedd5, 0.3, 10);
+    fillLight.position.set(0, -1, 3);
+    scene.add(fillLight);
+
+    // Ground Shadow Catcher Plane
+    const shadowPlaneGeo = new THREE.PlaneGeometry(10, 10);
+    const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.12 });
+    const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
+    shadowPlane.rotation.x = -Math.PI / 2;
+    shadowPlane.position.y = -1.8;
+    shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
+
+    // Subtle decorative ground circle
+    const groundRingGeo = new THREE.RingGeometry(1.2, 1.25, 48);
+    const groundRingMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+    const groundRing = new THREE.Mesh(groundRingGeo, groundRingMat);
+    groundRing.rotation.x = -Math.PI / 2;
+    groundRing.position.y = -1.79;
+    scene.add(groundRing);
+
+    // =========================================================================
+    // 3. STYLIZED LOW-POLY ROBOT MASCOT GENERATION
+    // =========================================================================
+    // Root group for entire mascot
+    const robotGroup = new THREE.Group();
+    scene.add(robotGroup);
+
+    // Materials Palette
+    const orangeTorsoMat = new THREE.MeshStandardMaterial({
+      color: 0xff6600,
+      roughness: 0.32,
+      metalness: 0.15,
+    });
+
+    const navyLimbMat = new THREE.MeshStandardMaterial({
+      color: 0x1e3a8a,
+      roughness: 0.4,
+      metalness: 0.25,
+    });
+
+    const jointMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.3,
+      metalness: 0.6,
+    });
+
+    const whiteHelmetMat = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.2,
+      metalness: 0.1,
+    });
+
+    const visorBlackMat = new THREE.MeshStandardMaterial({
+      color: 0x090d16,
+      roughness: 0.15,
+      metalness: 0.7,
+    });
+
+    const cyanEyeMat = new THREE.MeshStandardMaterial({
+      color: 0x00ffff,
+      emissive: 0x00e5ff,
+      emissiveIntensity: 1.4,
+      roughness: 0.1,
+    });
+
+    const hazardYellowMat = new THREE.MeshStandardMaterial({
+      color: 0xfbbf24,
+      roughness: 0.4,
+    });
+
+    const hazardDarkMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.4,
+    });
+
+    // -------------------------------------------------------------------------
+    // A. TORSO & CHEST
+    // -------------------------------------------------------------------------
+    const torsoGroup = new THREE.Group();
+    robotGroup.add(torsoGroup);
+
+    // Pill-shaped Body: Center cylinder + top/bottom hemispheres
+    const bodyHeight = 1.0;
+    const bodyRadius = 0.68;
+    const cylinderGeo = new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyHeight, 28);
+    const cylinderMesh = new THREE.Mesh(cylinderGeo, orangeTorsoMat);
+    cylinderMesh.castShadow = true;
+    cylinderMesh.receiveShadow = true;
+    torsoGroup.add(cylinderMesh);
+
+    const topCapGeo = new THREE.SphereGeometry(bodyRadius, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const topCap = new THREE.Mesh(topCapGeo, orangeTorsoMat);
+    topCap.position.y = bodyHeight / 2;
+    topCap.castShadow = true;
+    torsoGroup.add(topCap);
+
+    const bottomCapGeo = new THREE.SphereGeometry(bodyRadius, 28, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+    const bottomCap = new THREE.Mesh(bottomCapGeo, orangeTorsoMat);
+    bottomCap.position.y = -bodyHeight / 2;
+    bottomCap.castShadow = true;
+    torsoGroup.add(bottomCap);
+
+    // Chest Emblem / Tool Plate
+    const chestPlateGeo = new THREE.BoxGeometry(0.7, 0.45, 0.1);
+    const chestPlate = new THREE.Mesh(chestPlateGeo, jointMat);
+    chestPlate.position.set(0, 0.1, 0.65);
+    chestPlate.rotation.x = -0.05;
+    torsoGroup.add(chestPlate);
+
+    // Diagonal hazard stripes on chest plate
+    for (let i = -2; i <= 2; i++) {
+      const stripeGeo = new THREE.BoxGeometry(0.08, 0.35, 0.02);
+      const stripe = new THREE.Mesh(stripeGeo, (i % 2 === 0) ? hazardYellowMat : hazardDarkMat);
+      stripe.position.set(i * 0.12, 0.1, 0.71);
+      stripe.rotation.z = 0.45;
+      torsoGroup.add(stripe);
+    }
+
+    // Belt / Waist Ring
+    const beltGeo = new THREE.CylinderGeometry(0.71, 0.71, 0.12, 28);
+    const belt = new THREE.Mesh(beltGeo, jointMat);
+    belt.position.y = -0.35;
+    torsoGroup.add(belt);
+
+    // Belt buckle
+    const buckleGeo = new THREE.BoxGeometry(0.25, 0.16, 0.06);
+    const buckle = new THREE.Mesh(buckleGeo, hazardYellowMat);
+    buckle.position.set(0, -0.35, 0.7);
+    torsoGroup.add(buckle);
+
+    // -------------------------------------------------------------------------
+    // B. HEAD & HARD HAT (Rotates independently with cursor tracking)
+    // -------------------------------------------------------------------------
+    const headPivot = new THREE.Group();
+    headPivot.position.set(0, 0.95, 0); // Neck pivot height
+    robotGroup.add(headPivot);
+
+    // Neck joint
+    const neckGeo = new THREE.CylinderGeometry(0.25, 0.3, 0.25, 18);
+    const neck = new THREE.Mesh(neckGeo, jointMat);
+    neck.position.y = -0.1;
+    headPivot.add(neck);
+
+    // Head Base Sphere / Helmet Core
+    const headCoreGeo = new THREE.SphereGeometry(0.58, 28, 20);
+    const headCore = new THREE.Mesh(headCoreGeo, orangeTorsoMat);
+    headCore.castShadow = true;
+    headPivot.add(headCore);
+
+    // Black Digital Visor Screen
+    const visorGeo = new THREE.SphereGeometry(0.52, 24, 16, 0, Math.PI, 0, Math.PI / 1.7);
+    const visor = new THREE.Mesh(visorGeo, visorBlackMat);
+    visor.rotation.x = Math.PI / 2.3;
+    visor.position.set(0, 0.05, 0.15);
+    visor.scale.set(0.95, 0.65, 0.95);
+    headPivot.add(visor);
+
+    // Glowing Cyan Digital Eyes (Two rounded capsule/box eyes)
+    const eyeGroup = new THREE.Group();
+    headPivot.add(eyeGroup);
+
+    const eyeGeo = new THREE.BoxGeometry(0.18, 0.1, 0.04);
+    const leftEye = new THREE.Mesh(eyeGeo, cyanEyeMat);
+    leftEye.position.set(-0.2, 0.06, 0.56);
+    leftEye.rotation.y = -0.2;
+    eyeGroup.add(leftEye);
+
+    const rightEye = new THREE.Mesh(eyeGeo, cyanEyeMat);
+    rightEye.position.set(0.2, 0.06, 0.56);
+    rightEye.rotation.y = 0.2;
+    eyeGroup.add(rightEye);
+
+    // Eye accent brows (gives determined friendly look)
+    const browGeo = new THREE.BoxGeometry(0.2, 0.03, 0.04);
+    const leftBrow = new THREE.Mesh(browGeo, jointMat);
+    leftBrow.position.set(-0.2, 0.15, 0.56);
+    leftBrow.rotation.z = -0.1;
+    eyeGroup.add(leftBrow);
+
+    const rightBrow = new THREE.Mesh(browGeo, jointMat);
+    rightBrow.position.set(0.2, 0.15, 0.56);
+    rightBrow.rotation.z = 0.1;
+    eyeGroup.add(rightBrow);
+
+    // Construction Hard Hat (White)
+    const hardHatGroup = new THREE.Group();
+    hardHatGroup.position.set(0, 0.32, 0);
+    hardHatGroup.rotation.x = -0.08; // Cool slight tilt
+    headPivot.add(hardHatGroup);
+
+    // Hard Hat Dome
+    const hatDomeGeo = new THREE.SphereGeometry(0.66, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const hatDome = new THREE.Mesh(hatDomeGeo, whiteHelmetMat);
+    hatDome.castShadow = true;
+    hardHatGroup.add(hatDome);
+
+    // Hard Hat Brim (Circumferential lip)
+    const brimGeo = new THREE.CylinderGeometry(0.76, 0.76, 0.06, 32);
+    const brim = new THREE.Mesh(brimGeo, whiteHelmetMat);
+    brim.position.y = 0.02;
+    brim.castShadow = true;
+    hardHatGroup.add(brim);
+
+    // Hard Hat Front Visor Peak (Extended protective lip)
+    const peakGeo = new THREE.CylinderGeometry(0.78, 0.78, 0.04, 32, 1, false, -Math.PI / 4, Math.PI / 2);
+    const peak = new THREE.Mesh(peakGeo, whiteHelmetMat);
+    peak.position.set(0, -0.01, 0.12);
+    peak.scale.set(1.05, 1, 1.25);
+    hardHatGroup.add(peak);
+
+    // Hard Hat Center Ridge / Reinforcement Spine
+    const spineGeo = new THREE.BoxGeometry(0.14, 0.22, 0.95);
+    const spine = new THREE.Mesh(spineGeo, whiteHelmetMat);
+    spine.position.set(0, 0.46, -0.02);
+    hardHatGroup.add(spine);
+
+    // Small Safety Beacon / Antenna on hard hat
+    const antennaStemGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.28, 12);
+    const antennaStem = new THREE.Mesh(antennaStemGeo, jointMat);
+    antennaStem.position.set(0.42, 0.4, -0.2);
+    antennaStem.rotation.z = -0.3;
+    hardHatGroup.add(antennaStem);
+
+    const beaconGeo = new THREE.SphereGeometry(0.08, 16, 16);
+    const beaconMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      emissive: 0xf59e0b,
+      emissiveIntensity: 1.2,
+      roughness: 0.1
+    });
+    const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+    beacon.position.set(0.5, 0.55, -0.2);
+    hardHatGroup.add(beacon);
+
+    // -------------------------------------------------------------------------
+    // C. LIMBS: ROBOTIC ARMS & LEGS (Stylized Blue)
+    // -------------------------------------------------------------------------
+    // LEFT ARM (Viewer's left)
+    const leftArmPivot = new THREE.Group();
+    leftArmPivot.position.set(-0.76, 0.35, 0);
+    robotGroup.add(leftArmPivot);
+
+    const shoulderGeo = new THREE.SphereGeometry(0.2, 16, 16);
+    const leftShoulder = new THREE.Mesh(shoulderGeo, jointMat);
+    leftArmPivot.add(leftShoulder);
+
+    const bicepGeo = new THREE.CylinderGeometry(0.14, 0.12, 0.45, 16);
+    const leftBicep = new THREE.Mesh(bicepGeo, navyLimbMat);
+    leftBicep.position.y = -0.28;
+    leftArmPivot.add(leftBicep);
+
+    const elbowGeo = new THREE.SphereGeometry(0.13, 14, 14);
+    const leftElbow = new THREE.Mesh(elbowGeo, jointMat);
+    leftElbow.position.y = -0.52;
+    leftArmPivot.add(leftElbow);
+
+    const forearmGeo = new THREE.CylinderGeometry(0.12, 0.15, 0.4, 16);
+    const leftForearm = new THREE.Mesh(forearmGeo, navyLimbMat);
+    leftForearm.position.y = -0.74;
+    leftArmPivot.add(leftForearm);
+
+    // Left Mechanical Clamp Hand
+    const handGeo = new THREE.BoxGeometry(0.22, 0.12, 0.22);
+    const leftHand = new THREE.Mesh(handGeo, jointMat);
+    leftHand.position.y = -0.98;
+    leftArmPivot.add(leftHand);
+
+    // RIGHT ARM (Viewer's right - Waves when clicked)
+    const rightArmPivot = new THREE.Group();
+    rightArmPivot.position.set(0.76, 0.35, 0);
+    robotGroup.add(rightArmPivot);
+
+    const rightShoulder = new THREE.Mesh(shoulderGeo, jointMat);
+    rightArmPivot.add(rightShoulder);
+
+    const rightBicep = new THREE.Mesh(bicepGeo, navyLimbMat);
+    rightBicep.position.y = -0.28;
+    rightArmPivot.add(rightBicep);
+
+    const rightElbow = new THREE.Mesh(elbowGeo, jointMat);
+    rightElbow.position.y = -0.52;
+    rightArmPivot.add(rightElbow);
+
+    const rightForearm = new THREE.Mesh(forearmGeo, navyLimbMat);
+    rightForearm.position.y = -0.74;
+    rightArmPivot.add(rightForearm);
+
+    const rightHand = new THREE.Mesh(handGeo, jointMat);
+    rightHand.position.y = -0.98;
+    rightArmPivot.add(rightHand);
+
+    // LEGS & TREAD PADS
+    const legGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.45, 18);
+    const footGeo = new THREE.BoxGeometry(0.36, 0.18, 0.52);
+
+    // Left Leg
+    const leftLegGroup = new THREE.Group();
+    leftLegGroup.position.set(-0.38, -0.9, 0);
+    robotGroup.add(leftLegGroup);
+
+    const leftLegJoint = new THREE.Mesh(shoulderGeo, jointMat);
+    leftLegGroup.add(leftLegJoint);
+
+    const leftLeg = new THREE.Mesh(legGeo, navyLimbMat);
+    leftLeg.position.y = -0.25;
+    leftLegGroup.add(leftLeg);
+
+    const leftFoot = new THREE.Mesh(footGeo, jointMat);
+    leftFoot.position.set(0, -0.5, 0.08);
+    leftFoot.castShadow = true;
+    leftLegGroup.add(leftFoot);
+
+    // Right Leg
+    const rightLegGroup = new THREE.Group();
+    rightLegGroup.position.set(0.38, -0.9, 0);
+    robotGroup.add(rightLegGroup);
+
+    const rightLegJoint = new THREE.Mesh(shoulderGeo, jointMat);
+    rightLegGroup.add(rightLegJoint);
+
+    const rightLeg = new THREE.Mesh(legGeo, navyLimbMat);
+    rightLeg.position.y = -0.25;
+    rightLegGroup.add(rightLeg);
+
+    const rightFoot = new THREE.Mesh(footGeo, jointMat);
+    rightFoot.position.set(0, -0.5, 0.08);
+    rightFoot.castShadow = true;
+    rightLegGroup.add(rightFoot);
+
+    // Initial natural stance pose
+    leftArmPivot.rotation.z = 0.18;
+    leftArmPivot.rotation.x = 0.1;
+    rightArmPivot.rotation.z = -0.18;
+    rightArmPivot.rotation.x = 0.1;
+
+    // =========================================================================
+    // 4. MOUSE TRACKING & INTERACTIVE LOGIC
+    // =========================================================================
+    // Normalized Mouse coordinates (-1 to 1)
+    const mouse = { x: 0, y: 0 };
+    const targetRotation = { headX: 0, headY: 0, torsoX: 0, torsoY: 0 };
+    let lastMouseMoveTime = performance.now();
+    let isWaving = false;
+    let waveStartTime = 0;
+
+    function onMouseMove(event) {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      lastMouseMoveTime = performance.now();
+    }
+
+    // Touch support for mobile devices
+    function onTouchMove(event) {
+      if (event.touches.length > 0) {
+        mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+        lastMouseMoveTime = performance.now();
+      }
+    }
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+
+    // Click interactive action: Wave greeting!
+    window.addEventListener('pointerdown', () => {
+      isWaving = true;
+      waveStartTime = performance.now();
+    });
+
+    // =========================================================================
+    // 5. RESPONSIVE RESIZE HANDLER
+    // =========================================================================
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+    window.addEventListener('resize', onWindowResize);
+
+    // =========================================================================
+    // 6. ANIMATION & RENDER LOOP (WITH LERP & IDLE SINE WAVE)
+    // =========================================================================
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsedTime = clock.getElapsedTime();
+      const now = performance.now();
+      const isIdle = (now - lastMouseMoveTime) > 2500;
+
+      // -----------------------------------------------------------------------
+      // A. Idle Floating & Subtle Breathing Mechanics
+      // -----------------------------------------------------------------------
+      // Smooth vertical float
+      const floatOffsetY = Math.sin(elapsedTime * 2.2) * 0.08;
+      robotGroup.position.y = floatOffsetY;
+
+      // Soft breathing scale on torso (expand on inhale)
+      const breathScale = 1.0 + Math.sin(elapsedTime * 2.0) * 0.02;
+      torsoGroup.scale.set(1 / Math.sqrt(breathScale), breathScale, 1 / Math.sqrt(breathScale));
+
+      // Dynamic shadow scale & opacity follows float height
+      const shadowScale = 1.0 - (floatOffsetY * 1.5);
+      shadowPlane.scale.set(shadowScale, shadowScale, shadowScale);
+      shadowPlaneMat.opacity = 0.12 - (floatOffsetY * 0.05);
+
+      // Subtle limb counter-balance sway
+      leftArmPivot.rotation.x = 0.1 + Math.sin(elapsedTime * 1.8) * 0.05;
+      if (!isWaving) {
+        rightArmPivot.rotation.x = 0.1 - Math.sin(elapsedTime * 1.8) * 0.05;
+      }
+
+      // -----------------------------------------------------------------------
+      // B. Mouse Tracking Target Calculations & Clamping
+      // -----------------------------------------------------------------------
+      if (!isIdle) {
+        // Active cursor tracking
+        // Head rotation limits: Yaw ± 0.75 rad (~43 deg), Pitch ± 0.45 rad (~25 deg)
+        targetRotation.headY = THREE.MathUtils.clamp(mouse.x * 0.75, -0.75, 0.75);
+        targetRotation.headX = THREE.MathUtils.clamp(-mouse.y * 0.45, -0.45, 0.45);
+
+        // Torso follows head with smaller factor for anatomical realism
+        targetRotation.torsoY = THREE.MathUtils.clamp(mouse.x * 0.32, -0.32, 0.32);
+        targetRotation.torsoX = THREE.MathUtils.clamp(-mouse.y * 0.15, -0.15, 0.15);
+      } else {
+        // Idle wander: gently look around with gentle Lissajous / sine waves
+        targetRotation.headY = Math.sin(elapsedTime * 0.8) * 0.35;
+        targetRotation.headX = Math.cos(elapsedTime * 0.6) * 0.15;
+        targetRotation.torsoY = Math.sin(elapsedTime * 0.8) * 0.12;
+        targetRotation.torsoX = 0;
+      }
+
+      // -----------------------------------------------------------------------
+      // C. Smooth Interpolation (LERP)
+      // -----------------------------------------------------------------------
+      const lerpSpeed = 0.065;
+      headPivot.rotation.y = THREE.MathUtils.lerp(headPivot.rotation.y, targetRotation.headY, lerpSpeed);
+      headPivot.rotation.x = THREE.MathUtils.lerp(headPivot.rotation.x, targetRotation.headX, lerpSpeed);
+
+      torsoGroup.rotation.y = THREE.MathUtils.lerp(torsoGroup.rotation.y, targetRotation.torsoY, lerpSpeed);
+      torsoGroup.rotation.x = THREE.MathUtils.lerp(torsoGroup.rotation.x, targetRotation.torsoX, lerpSpeed);
+
+      // Subtle digital eye pupil shift toward mouse
+      eyeGroup.position.x = THREE.MathUtils.lerp(eyeGroup.position.x, targetRotation.headY * 0.08, 0.1);
+      eyeGroup.position.y = THREE.MathUtils.lerp(eyeGroup.position.y, -targetRotation.headX * 0.06, 0.1);
+
+      // -----------------------------------------------------------------------
+      // D. Click Wave Animation
+      // -----------------------------------------------------------------------
+      if (isWaving) {
+        const waveElapsed = (now - waveStartTime) / 1000;
+        if (waveElapsed < 1.6) {
+          // Raise right arm and oscillate forearm
+          rightArmPivot.rotation.z = THREE.MathUtils.lerp(rightArmPivot.rotation.z, -2.4, 0.15);
+          rightArmPivot.rotation.x = Math.sin(waveElapsed * 16) * 0.35;
+          rightForearm.rotation.z = Math.sin(waveElapsed * 20) * 0.4;
+        } else {
+          // Return to resting pose
+          isWaving = false;
+          rightForearm.rotation.z = 0;
+        }
+      } else {
+        rightArmPivot.rotation.z = THREE.MathUtils.lerp(rightArmPivot.rotation.z, -0.18, 0.08);
+      }
+
+      // Subtle pulsing of the orange antenna beacon
+      beaconMat.emissiveIntensity = 1.0 + Math.sin(elapsedTime * 6) * 0.6;
+
+      // Render the scene
+      renderer.render(scene, camera);
+    }
+
+    // Start render loop
+    animate();
+  </script>
+</body>
+</html>
