@@ -277,20 +277,32 @@ export const RobotMascot: React.FC<RobotMascotProps> = ({
     leftHand.position.y = -0.92;
     leftArmPivot.add(leftHand);
 
-    // Right Arm
+    // Right Arm with Shoulder and Elbow pivots (offset slightly forward at z=0.1)
     const rightArmPivot = new THREE.Group();
-    rightArmPivot.position.set(0.73, 0.32, 0);
+    rightArmPivot.position.set(0.73, 0.32, 0.1);
     robotGroup.add(rightArmPivot);
     rightArmPivot.add(new THREE.Mesh(shoulderGeo, jointMat));
+
     const rightBicep = new THREE.Mesh(bicepGeo, navyLimbMat);
-    rightBicep.position.y = -0.26;
+    rightBicep.position.y = -0.22;
     rightArmPivot.add(rightBicep);
+
+    // Elbow Pivot for natural, visible arm flexion & waving
+    const rightElbowPivot = new THREE.Group();
+    rightElbowPivot.position.set(0, -0.42, 0);
+    rightArmPivot.add(rightElbowPivot);
+
+    const rightElbowMesh = new THREE.Mesh(shoulderGeo, jointMat);
+    rightElbowMesh.scale.set(0.85, 0.85, 0.85);
+    rightElbowPivot.add(rightElbowMesh);
+
     const rightForearm = new THREE.Mesh(forearmGeo, navyLimbMat);
-    rightForearm.position.y = -0.68;
-    rightArmPivot.add(rightForearm);
+    rightForearm.position.y = -0.22;
+    rightElbowPivot.add(rightForearm);
+
     const rightHand = new THREE.Mesh(handGeo, jointMat);
-    rightHand.position.y = -0.92;
-    rightArmPivot.add(rightHand);
+    rightHand.position.y = -0.45;
+    rightElbowPivot.add(rightHand);
 
     // Legs
     const legGeo = new THREE.CylinderGeometry(0.15, 0.17, 0.42, 18);
@@ -417,21 +429,30 @@ export const RobotMascot: React.FC<RobotMascotProps> = ({
       eyeGroup.position.x = THREE.MathUtils.lerp(eyeGroup.position.x, targetRotation.headY * 0.08, 0.1);
       eyeGroup.position.y = THREE.MathUtils.lerp(eyeGroup.position.y, -targetRotation.headX * 0.06, 0.1);
 
-      // Wave animation
+      // Wave animation - lifted forward and up so hand is 100% visible in front of the robot's face
       if (wavingActive) {
         const waveElapsed = (now - waveStartTime) / 1000;
-        if (waveElapsed < 1.6) {
-          rightArmPivot.rotation.z = THREE.MathUtils.lerp(rightArmPivot.rotation.z, -2.4, 0.15);
-          rightArmPivot.rotation.x = Math.sin(waveElapsed * 16) * 0.35;
-          rightForearm.rotation.z = Math.sin(waveElapsed * 20) * 0.4;
+        if (waveElapsed < 2.0) {
+          // Upper arm swings forward (+Z) and slightly outward
+          rightArmPivot.rotation.x = THREE.MathUtils.lerp(rightArmPivot.rotation.x, -1.35, 0.18);
+          rightArmPivot.rotation.z = THREE.MathUtils.lerp(rightArmPivot.rotation.z, -0.35, 0.18);
+          rightArmPivot.rotation.y = THREE.MathUtils.lerp(rightArmPivot.rotation.y, 0.45, 0.18);
+
+          // Forearm bends straight up towards eye level in front of the body
+          rightElbowPivot.rotation.x = THREE.MathUtils.lerp(rightElbowPivot.rotation.x, 1.5, 0.2);
+          // Forearm & hand wave back-and-forth left to right
+          rightElbowPivot.rotation.z = Math.sin(waveElapsed * 16) * 0.45;
         } else {
           wavingActive = false;
           setIsWaving(false);
-          rightForearm.rotation.z = 0;
         }
       } else {
+        // Return smoothly to resting pose
+        rightArmPivot.rotation.x = THREE.MathUtils.lerp(rightArmPivot.rotation.x, 0.1 - Math.sin(elapsedTime * 1.8) * 0.05, 0.08);
         rightArmPivot.rotation.z = THREE.MathUtils.lerp(rightArmPivot.rotation.z, -0.18, 0.08);
-        rightArmPivot.rotation.x = 0.1 - Math.sin(elapsedTime * 1.8) * 0.05;
+        rightArmPivot.rotation.y = THREE.MathUtils.lerp(rightArmPivot.rotation.y, 0, 0.08);
+        rightElbowPivot.rotation.x = THREE.MathUtils.lerp(rightElbowPivot.rotation.x, 0, 0.08);
+        rightElbowPivot.rotation.z = THREE.MathUtils.lerp(rightElbowPivot.rotation.z, 0, 0.08);
       }
 
       beaconMat.emissiveIntensity = 1.0 + Math.sin(elapsedTime * 6) * 0.6;
