@@ -11,14 +11,50 @@ const STORAGE_KEYS = {
   LANGUAGE: 'shramik_lang_v1',
 };
 
+// Universal storage adapter ensuring seamless execution in browser and test/SSR runtimes
+const memoryStore: Record<string, string> = {};
+
+function safeGet(key: string): string | null {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem(key);
+    }
+  } catch {
+    // ignore access error
+  }
+  return memoryStore[key] || null;
+}
+
+function safeSet(key: string, value: string): void {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value);
+    }
+  } catch {
+    // ignore access error
+  }
+  memoryStore[key] = value;
+}
+
+function safeRemove(key: string): void {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore access error
+  }
+  delete memoryStore[key];
+}
+
 export const storageService = {
   getUsers(): User[] {
+    const data = safeGet(STORAGE_KEYS.USERS);
+    if (!data) {
+      this.saveUsers(SEED_USERS);
+      return SEED_USERS;
+    }
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.USERS);
-      if (!data) {
-        this.saveUsers(SEED_USERS);
-        return SEED_USERS;
-      }
       return JSON.parse(data);
     } catch {
       return SEED_USERS;
@@ -27,20 +63,20 @@ export const storageService = {
 
   saveUsers(users: User[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      safeSet(STORAGE_KEYS.USERS, JSON.stringify(users));
     } catch (e) {
       console.error('Failed to save users', e);
     }
   },
 
   getCurrentUser(): User | null {
+    const data = safeGet(STORAGE_KEYS.CURRENT_USER);
+    if (!data) {
+      // Default to Rajesh Sharma (Customer) for quick preview, or null
+      const users = this.getUsers();
+      return users.find(u => u.id === 'SQ-C-201') || users[0] || null;
+    }
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      if (!data) {
-        // Default to Rajesh Sharma (Customer) for quick preview, or null
-        const users = this.getUsers();
-        return users.find(u => u.id === 'SQ-C-201') || users[0];
-      }
       return JSON.parse(data);
     } catch {
       return null;
@@ -50,9 +86,9 @@ export const storageService = {
   setCurrentUser(user: User | null): void {
     try {
       if (user) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+        safeSet(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
       } else {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+        safeRemove(STORAGE_KEYS.CURRENT_USER);
       }
     } catch (e) {
       console.error('Failed to set current user', e);
@@ -60,12 +96,12 @@ export const storageService = {
   },
 
   getJobs(): Job[] {
+    const data = safeGet(STORAGE_KEYS.JOBS);
+    if (!data) {
+      this.saveJobs(INITIAL_JOBS);
+      return INITIAL_JOBS;
+    }
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.JOBS);
-      if (!data) {
-        this.saveJobs(INITIAL_JOBS);
-        return INITIAL_JOBS;
-      }
       return JSON.parse(data);
     } catch {
       return INITIAL_JOBS;
@@ -74,16 +110,17 @@ export const storageService = {
 
   saveJobs(jobs: Job[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.JOBS, JSON.stringify(jobs));
+      safeSet(STORAGE_KEYS.JOBS, JSON.stringify(jobs));
     } catch (e) {
       console.error('Failed to save jobs', e);
     }
   },
 
   getApplications(): JobApplication[] {
+    const data = safeGet(STORAGE_KEYS.APPLICATIONS);
+    if (!data) return [];
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.APPLICATIONS);
-      return data ? JSON.parse(data) : [];
+      return JSON.parse(data);
     } catch {
       return [];
     }
@@ -91,16 +128,17 @@ export const storageService = {
 
   saveApplications(apps: JobApplication[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.APPLICATIONS, JSON.stringify(apps));
+      safeSet(STORAGE_KEYS.APPLICATIONS, JSON.stringify(apps));
     } catch (e) {
       console.error('Failed to save applications', e);
     }
   },
 
   getSMSMessages(): SMSMessage[] {
+    const data = safeGet(STORAGE_KEYS.SMS_MESSAGES);
+    if (!data) return [];
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.SMS_MESSAGES);
-      return data ? JSON.parse(data) : [];
+      return JSON.parse(data);
     } catch {
       return [];
     }
@@ -108,19 +146,19 @@ export const storageService = {
 
   saveSMSMessages(msgs: SMSMessage[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.SMS_MESSAGES, JSON.stringify(msgs));
+      safeSet(STORAGE_KEYS.SMS_MESSAGES, JSON.stringify(msgs));
     } catch (e) {
       console.error('Failed to save SMS messages', e);
     }
   },
 
   getWorkHistory(): WorkHistoryItem[] {
+    const data = safeGet(STORAGE_KEYS.WORK_HISTORY);
+    if (!data) {
+      this.saveWorkHistory(INITIAL_WORK_HISTORY);
+      return INITIAL_WORK_HISTORY;
+    }
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.WORK_HISTORY);
-      if (!data) {
-        this.saveWorkHistory(INITIAL_WORK_HISTORY);
-        return INITIAL_WORK_HISTORY;
-      }
       return JSON.parse(data);
     } catch {
       return INITIAL_WORK_HISTORY;
@@ -129,36 +167,32 @@ export const storageService = {
 
   saveWorkHistory(history: WorkHistoryItem[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.WORK_HISTORY, JSON.stringify(history));
+      safeSet(STORAGE_KEYS.WORK_HISTORY, JSON.stringify(history));
     } catch (e) {
       console.error('Failed to save work history', e);
     }
   },
 
   getLanguage(): LanguageCode {
-    try {
-      const lang = localStorage.getItem(STORAGE_KEYS.LANGUAGE) as LanguageCode;
-      return (lang === 'en' || lang === 'hi' || lang === 'mr') ? lang : 'en';
-    } catch {
-      return 'en';
-    }
+    const lang = safeGet(STORAGE_KEYS.LANGUAGE) as LanguageCode;
+    return (lang === 'en' || lang === 'hi' || lang === 'mr') ? lang : 'en';
   },
 
   setLanguage(lang: LanguageCode): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
+      safeSet(STORAGE_KEYS.LANGUAGE, lang);
     } catch (e) {
       console.error('Failed to set language', e);
     }
   },
 
   resetToDefaults(): void {
-    localStorage.removeItem(STORAGE_KEYS.USERS);
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-    localStorage.removeItem(STORAGE_KEYS.JOBS);
-    localStorage.removeItem(STORAGE_KEYS.APPLICATIONS);
-    localStorage.removeItem(STORAGE_KEYS.SMS_MESSAGES);
-    localStorage.removeItem(STORAGE_KEYS.WORK_HISTORY);
+    safeRemove(STORAGE_KEYS.USERS);
+    safeRemove(STORAGE_KEYS.CURRENT_USER);
+    safeRemove(STORAGE_KEYS.JOBS);
+    safeRemove(STORAGE_KEYS.APPLICATIONS);
+    safeRemove(STORAGE_KEYS.SMS_MESSAGES);
+    safeRemove(STORAGE_KEYS.WORK_HISTORY);
     this.saveUsers(SEED_USERS);
     this.saveJobs(INITIAL_JOBS);
     this.saveWorkHistory(INITIAL_WORK_HISTORY);
