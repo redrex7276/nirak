@@ -7,7 +7,7 @@ export const CustomerHistoryPage: React.FC<{ navigate: (r: string) => void }> = 
   const { currentUser } = useAuth();
   const { jobs, workHistory } = useApp();
 
-  const customerJobs = jobs.filter(j => j.customerId === currentUser?.id || currentUser?.id === 'SQ-C-201');
+  const customerJobs = jobs.filter(j => j.customerId === currentUser?.id);
   const completedJobs = customerJobs.filter(j => j.status === 'completed');
 
   return (

@@ -108,24 +108,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleSMSPanel = () => setIsSMSPanelOpen(prev => !prev);
 
   const createJob = async (params: CreateJobParams): Promise<Job> => {
+    const title = (params.title || '').trim();
+    if (title.length < 3) {
+      throw new Error('Job title must be at least 3 characters long.');
+    }
+    const location = (params.location || '').trim();
+    if (!location) {
+      throw new Error('Work location is required.');
+    }
+    const workersRequired = Math.max(1, Math.min(1000, Math.floor(Number(params.workersRequired) || 1)));
+    const durationDays = Math.max(1, Math.min(365, Math.floor(Number(params.durationDays) || 1)));
+    const paymentAmount = Math.max(1, Number(params.paymentAmount) || 100);
+    const experienceRequired = Math.max(0, Math.min(50, Math.floor(Number(params.experienceRequired) || 0)));
+
     const newId = `SQ-J-${Math.floor(3000 + Math.random() * 1000)}`;
     const newJob: Job = {
       id: newId,
       customerId: currentUser?.id || 'SQ-C-201',
       customerName: currentUser?.name || 'Rajesh Sharma',
-      title: params.title,
+      title,
       category: params.category,
-      description: params.description,
-      location: params.location,
-      startDate: params.startDate,
-      durationDays: Number(params.durationDays),
-      reportingTime: params.reportingTime || '8:00 AM',
-      workersRequired: Number(params.workersRequired),
-      skills: params.skills,
-      experienceRequired: Number(params.experienceRequired),
-      preferredLanguage: params.preferredLanguage,
-      paymentType: params.paymentType,
-      paymentAmount: Number(params.paymentAmount),
+      description: (params.description || '').trim(),
+      location,
+      startDate: (params.startDate || '').trim() || 'Immediate',
+      durationDays,
+      reportingTime: (params.reportingTime || '').trim() || '8:00 AM',
+      workersRequired,
+      skills: params.skills || [],
+      experienceRequired,
+      preferredLanguage: params.preferredLanguage || 'mr',
+      paymentType: params.paymentType || 'daily',
+      paymentAmount,
       status: 'open',
       shortlistedWorkerIds: [],
       notifiedWorkerIds: [],
@@ -358,6 +371,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const assignWorker = async (jobId: string, workerId: string): Promise<void> => {
     const targetJob = jobs.find(j => j.id === jobId);
+    if (!targetJob) return;
+
+    // Strict quota enforcement: prevent exceeding workersRequired
+    if (
+      targetJob.assignedWorkerIds.length >= targetJob.workersRequired &&
+      !targetJob.assignedWorkerIds.includes(workerId)
+    ) {
+      addToast(
+        'Crew Quota Met',
+        `This job requires ${targetJob.workersRequired} worker(s). All positions have already been assigned.`,
+        'warning'
+      );
+      return;
+    }
+
     const workerUser = users.find(u => u.id === workerId || u.freelancerProfile?.freelancerId === workerId);
     const workerName = workerUser?.name || 'Worker';
     const workerPhone = workerUser?.mobile || '+91 98000 00000';

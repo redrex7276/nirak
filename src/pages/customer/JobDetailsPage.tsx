@@ -37,7 +37,7 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
 
   const { users } = useAuth();
 
-  const job = jobs.find(j => j.id === jobId) || jobs[0];
+  const job = jobs.find(j => j.id === jobId);
 
   const [activeTab, setActiveTab] = useState<'match' | 'responses'>('match');
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,7 +86,7 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
 
   // Dispatch opportunities
   const handleSendOpportunities = async () => {
-    if (selectedWorkerIds.length === 0) return;
+    if (!job || selectedWorkerIds.length === 0) return;
     setIsSending(true);
     await sendOpportunities(job.id, selectedWorkerIds);
     setIsSending(false);
@@ -177,8 +177,10 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-shramik-600" />
                 <div>
-                  <span className="text-slate-400 text-[10px] block">Crew Needed</span>
-                  <strong className="text-navy-900">{job.workersRequired} Workers</strong>
+                  <span className="text-slate-400 text-[10px] block">Crew Status</span>
+                  <strong className="text-navy-900">
+                    {job.assignedWorkerIds.length} / {job.workersRequired} Assigned
+                  </strong>
                 </div>
               </div>
             </div>
@@ -590,13 +592,19 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
                       {/* Action: Assign or Simulate */}
                       <div className="flex items-center gap-2">
                         {isAccepted && (
-                          <button
-                            onClick={() => assignWorker(job.id, app.workerId)}
-                            className="tactile-btn-primary px-4 py-2 text-xs font-bold shadow-tactile"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            <span>ASSIGN WORK</span>
-                          </button>
+                          (job.assignedWorkerIds.length >= job.workersRequired && !job.assignedWorkerIds.includes(app.workerId)) ? (
+                            <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                              CREW FULL ({job.assignedWorkerIds.length}/{job.workersRequired})
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => assignWorker(job.id, app.workerId)}
+                              className="tactile-btn-primary px-4 py-2 text-xs font-bold shadow-tactile"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              <span>ASSIGN WORK</span>
+                            </button>
+                          )
                         )}
 
                         <button

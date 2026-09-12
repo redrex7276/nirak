@@ -20,7 +20,7 @@ export const CustomerDashboard: React.FC<{ navigate: (r: string) => void }> = ({
   const { currentUser } = useAuth();
   const { jobs, applications, toggleSMSPanel, smsMessages } = useApp();
 
-  const customerJobs = jobs.filter(j => j.customerId === currentUser?.id || currentUser?.id === 'SQ-C-201');
+  const customerJobs = jobs.filter(j => j.customerId === currentUser?.id);
 
   // Stats calculation
   const activeJobsCount = customerJobs.filter(j => j.status !== 'completed' && j.status !== 'cancelled').length;
