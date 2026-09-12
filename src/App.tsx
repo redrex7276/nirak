@@ -4,6 +4,7 @@ import { AppProvider } from './context/AppContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { SMSActivityPanel } from './components/sms/SMSActivityPanel';
+import { ShramikChatbot } from './components/chat/ShramikChatbot';
 import { ToastContainer } from './components/ui/Toast';
 
 import { LandingPage } from './pages/LandingPage';
@@ -12,6 +13,7 @@ import { CustomerRegisterPage } from './pages/auth/CustomerRegisterPage';
 import { FreelancerRegisterPage } from './pages/auth/FreelancerRegisterPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
+import { QuotesPage } from './pages/QuotesPage';
 
 import { CustomerDashboard } from './pages/customer/CustomerDashboard';
 import { CreateWorkPage } from './pages/customer/CreateWorkPage';
@@ -86,6 +88,9 @@ function RouterShell() {
     }
     if (currentRoute === '/how-it-works') {
       return <HowItWorksPage navigate={navigate} />;
+    }
+    if (currentRoute === '/quotes') {
+      return <QuotesPage navigate={navigate} />;
     }
 
     // Route protection enforcement
@@ -208,6 +213,9 @@ function RouterShell() {
       
       {/* Interactive SMS Activity Demo Panel (internal simulation tool) */}
       <SMSActivityPanel />
+
+      {/* Floating Shramik AI Chatbot Assistant */}
+      <ShramikChatbot navigate={navigate} />
 
       {/* Global Toast Notifications */}
       <ToastContainer />

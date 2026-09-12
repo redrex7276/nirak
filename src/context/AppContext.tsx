@@ -11,6 +11,7 @@ import {
 import { storageService } from '../services/storageService';
 import { smsService, evaluateSMSStateTransition } from '../services/smsService';
 import { firebaseService } from '../services/firebaseService';
+import { apiClient } from '../services/apiClient';
 import { useAuth } from './AuthContext';
 
 interface CreateJobParams {
@@ -71,6 +72,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isSMSPanelOpen, setIsSMSPanelOpen] = useState(false);
   const [selectedWorkerForDemo, setSelectedWorkerForDemo] = useState<string>('SQ-F-1042'); // Defaults to Ramesh Naik
 
+  // Rehydrate jobs, applications, SMS logs, and history from SQLite backend database on mount
+  useEffect(() => {
+    async function loadBackendData() {
+      try {
+        const { jobs: dbJobs } = await apiClient.getJobs();
+        if (dbJobs && dbJobs.length > 0) {
+          setJobs(dbJobs);
+        }
+        const dbSms = await apiClient.getSMSLogs();
+        if (dbSms && dbSms.length > 0) {
+          setSmsMessages(dbSms);
+        }
+        const dbApps = await apiClient.getApplications();
+        if (dbApps && dbApps.length > 0) {
+          setApplications(dbApps);
+        }
+      } catch (err) {
+        console.warn('Backend database rehydration note:', err);
+      }
+    }
+    loadBackendData();
+  }, []);
+
   useEffect(() => {
     storageService.saveJobs(jobs);
   }, [jobs]);
@@ -122,6 +146,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const paymentAmount = Math.max(1, Number(params.paymentAmount) || 100);
     const experienceRequired = Math.max(0, Math.min(50, Math.floor(Number(params.experienceRequired) || 0)));
 
+    // 1. Persist directly to backend SQLite database
+    try {
+      const persistedJob = await apiClient.createJob({
+        title,
+        category: params.category,
+        description: (params.description || '').trim(),
+        location,
+        startDate: (params.startDate || '').trim() || new Date().toISOString().split('T')[0],
+        durationDays,
+        reportingTime: (params.reportingTime || '').trim() || '08:00 AM',
+        workersRequired,
+        skills: params.skills || [],
+        experienceRequired,
+        preferredLanguage: params.preferredLanguage || 'mr',
+        paymentType: params.paymentType || 'daily',
+        paymentAmount
+      });
+
+      if (persistedJob) {
+        setJobs(prev => [persistedJob, ...prev.filter(j => j.id !== persistedJob.id)]);
+        firebaseService.syncJob(persistedJob);
+        addToast('Work Created Successfully', `Created "${persistedJob.title}" in ${persistedJob.location}`, 'success');
+        return persistedJob;
+      }
+    } catch (err: any) {
+      console.warn('Backend job creation note, continuing with optimistic client sync:', err);
+    }
+
     const newId = `SQ-J-${Math.floor(3000 + Math.random() * 1000)}`;
     const newJob: Job = {
       id: newId,
@@ -157,6 +209,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const sendOpportunities = async (jobId: string, workerIds: string[]): Promise<void> => {
+    // 1. Dispatch via backend SQLite database
+    try {
+      await apiClient.dispatchOpportunities(jobId, workerIds);
+      const { jobs: freshJobs } = await apiClient.getJobs();
+      if (freshJobs && freshJobs.length > 0) setJobs(freshJobs);
+      const freshSms = await apiClient.getSMSLogs();
+      if (freshSms) setSmsMessages(freshSms);
+      const freshApps = await apiClient.getApplications();
+      if (freshApps) setApplications(freshApps);
+      setIsSMSPanelOpen(true);
+      addToast(
+        `${workerIds.length} Opportunities Dispatched`,
+        `SMS sent to ${workerIds.length} freelancers in their preferred language.`,
+        'success'
+      );
+      return;
+    } catch (apiErr) {
+      console.warn('Backend dispatch note, falling back:', apiErr);
+    }
+
     const targetJob = jobs.find(j => j.id === jobId);
     if (!targetJob) return;
 
@@ -246,6 +318,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const simulateWorkerReply = async (jobId: string, workerId: string, reply: string): Promise<void> => {
+    // 1. Process via backend SQLite database state machine
+    try {
+      const res = await apiClient.simulateWorkerReply(jobId, workerId, reply);
+      if (res && res.success) {
+        const { jobs: freshJobs } = await apiClient.getJobs();
+        if (freshJobs && freshJobs.length > 0) setJobs(freshJobs);
+        const freshSms = await apiClient.getSMSLogs();
+        if (freshSms) setSmsMessages(freshSms);
+        const freshApps = await apiClient.getApplications();
+        if (freshApps) setApplications(freshApps);
+        addToast(`SMS Reply Processed (${reply})`, `Worker state updated to ${res.newState.toUpperCase()}`, 'success');
+        return;
+      }
+    } catch (apiErr) {
+      console.warn('Backend simulate reply note, falling back:', apiErr);
+    }
+
     const targetJob = jobs.find(j => j.id === jobId);
     const workerUser = users.find(u => u.id === workerId || u.freelancerProfile?.freelancerId === workerId);
     const workerName = workerUser?.name || 'Worker';
@@ -353,7 +442,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       replyContent = smsService.generateRejectedSMS(templateParams, workerLang);
     }
 
-    const outgoingReply: SMSMessage = {
+    const outgoingSMS: SMSMessage = {
       id: `SMS-OUT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       jobId,
       workerId,
@@ -366,22 +455,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       step: transition.outgoingStep || 'info'
     };
 
-    setSmsMessages(prev => [outgoingReply, incomingSMS, ...prev]);
+    setSmsMessages(prev => [outgoingSMS, incomingSMS, ...prev]);
 
-    // Sync SMS logs to Firebase backend
+    // Background sync to Firebase
+    firebaseService.syncApplication({
+      ...currentApp,
+      status: nextStatus,
+      respondedAt: now
+    });
     firebaseService.syncSMSMessage(incomingSMS);
-    firebaseService.syncSMSMessage(outgoingReply);
+    firebaseService.syncSMSMessage(outgoingSMS);
 
+    // Toast feedback
     if (nextStatus === 'details_requested') {
-      addToast(`${workerName} Requested Full Details`, 'System delivered job terms over SMS.', 'info');
+      addToast(`${workerName} Requested Details`, 'Job terms sent via SMS.', 'info');
     } else if (nextStatus === 'accepted') {
-      addToast(`✓ ${workerName} Accepted Work!`, 'Status updated to ACCEPTED on Customer Dashboard.', 'success');
+      addToast(`${workerName} Accepted Terms!`, 'Worker ready for assignment.', 'success');
     } else if (nextStatus === 'rejected') {
       addToast(`${workerName} Declined Opportunity`, 'Status updated to REJECTED.', 'warning');
     }
   };
 
   const assignWorker = async (jobId: string, workerId: string): Promise<void> => {
+    // 1. Assign via backend SQLite database transaction
+    try {
+      const assignedJob = await apiClient.assignWorker(jobId, workerId);
+      if (assignedJob) {
+        setJobs(prev => prev.map(j => j.id === jobId ? assignedJob : j));
+        const freshApps = await apiClient.getApplications();
+        if (freshApps) setApplications(freshApps);
+        const freshSms = await apiClient.getSMSLogs();
+        if (freshSms) setSmsMessages(freshSms);
+        addToast('Worker Assigned Successfully', `Assigned worker to "${assignedJob.title}"`, 'success');
+        return;
+      }
+    } catch (apiErr: any) {
+      if (apiErr.message?.includes('quota') || apiErr.message?.includes('must reply 1')) {
+        addToast('Assignment Guard', apiErr.message, 'warning');
+        return;
+      }
+      console.warn('Backend assignWorker note, falling back:', apiErr);
+    }
+
     const targetJob = jobs.find(j => j.id === jobId);
     if (!targetJob) return;
 
@@ -463,6 +578,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const completeJob = async (jobId: string): Promise<void> => {
+    // 1. Complete via backend SQLite database transaction
+    try {
+      const completedJob = await apiClient.completeJob(jobId);
+      if (completedJob) {
+        setJobs(prev => prev.map(j => j.id === jobId ? completedJob : j));
+        const freshSms = await apiClient.getSMSLogs();
+        if (freshSms) setSmsMessages(freshSms);
+        if (currentUser?.role === 'freelancer') {
+          const hist = await apiClient.getFreelancerHistory(currentUser.id);
+          if (hist) setWorkHistory(hist);
+        }
+        addToast('Work Marked Completed!', 'Logged in official persistent database work history ledger.', 'success');
+        return;
+      }
+    } catch (apiErr) {
+      console.warn('Backend completeJob note, falling back:', apiErr);
+    }
+
     const targetJob = jobs.find(j => j.id === jobId);
     if (!targetJob) return;
 

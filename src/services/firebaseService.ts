@@ -4,9 +4,6 @@ import {
   setDoc, 
   getDocs, 
   getDoc, 
-  query, 
-  orderBy, 
-  limit,
   serverTimestamp 
 } from "firebase/firestore";
 import { db, app } from "./firebase";
@@ -41,19 +38,19 @@ class FirebaseService {
   }
 
   /**
-   * Sync a job to Firestore
+   * Fetch a user profile from Firestore by UID or custom ID
    */
-  async syncJob(job: Job): Promise<boolean> {
+  async getUser(userId: string): Promise<User | null> {
     try {
-      const jobRef = doc(db, this.collectionNames.jobs, job.id);
-      await setDoc(jobRef, {
-        ...job,
-        updatedAtFirebase: serverTimestamp()
-      }, { merge: true });
-      return true;
+      const userRef = doc(db, this.collectionNames.users, userId);
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        return snap.data() as User;
+      }
+      return null;
     } catch (err) {
-      console.warn("Firebase syncJob note: proceeding with local state", err);
-      return false;
+      console.warn("Firebase getUser note:", err);
+      return null;
     }
   }
 
@@ -71,6 +68,37 @@ class FirebaseService {
     } catch (err) {
       console.warn("Firebase syncUser note: proceeding with local state", err);
       return false;
+    }
+  }
+
+  /**
+   * Sync a job to Firestore
+   */
+  async syncJob(job: Job): Promise<boolean> {
+    try {
+      const jobRef = doc(db, this.collectionNames.jobs, job.id);
+      await setDoc(jobRef, {
+        ...job,
+        updatedAtFirebase: serverTimestamp()
+      }, { merge: true });
+      return true;
+    } catch (err) {
+      console.warn("Firebase syncJob note: proceeding with local state", err);
+      return false;
+    }
+  }
+
+  /**
+   * Fetch all jobs from Firestore
+   */
+  async getJobs(): Promise<Job[]> {
+    try {
+      const jobsCol = collection(db, this.collectionNames.jobs);
+      const snap = await getDocs(jobsCol);
+      return snap.docs.map(d => d.data() as Job);
+    } catch (err) {
+      console.warn("Firebase getJobs note:", err);
+      return [];
     }
   }
 

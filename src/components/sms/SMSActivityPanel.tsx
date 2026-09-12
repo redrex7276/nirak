@@ -77,7 +77,7 @@ export const SMSActivityPanel: React.FC = () => {
     return (
       <aside 
         aria-label="SMS Activity Drawer"
-        className="fixed bottom-4 right-4 z-40"
+        className="fixed bottom-4 left-4 z-40"
       >
         <button
           onClick={() => setIsSMSPanelOpen(true)}
@@ -99,7 +99,7 @@ export const SMSActivityPanel: React.FC = () => {
   return (
     <aside 
       aria-label="SMS Activity Panel"
-      className="fixed bottom-0 right-0 left-0 md:left-auto md:right-6 md:bottom-6 md:w-[480px] max-h-[85vh] z-50 flex flex-col bg-white border-2 border-slate-300 rounded-t-card md:rounded-card shadow-2xl overflow-hidden transition-all duration-300"
+      className="fixed bottom-0 left-0 right-0 md:right-auto md:left-6 md:bottom-6 md:w-[480px] max-h-[85vh] z-50 flex flex-col bg-white border-2 border-slate-300 rounded-t-card md:rounded-card shadow-2xl overflow-hidden transition-all duration-300"
     >
       {/* Header */}
       <div className="bg-navy-900 text-white p-4 flex items-center justify-between border-b border-navy-800">

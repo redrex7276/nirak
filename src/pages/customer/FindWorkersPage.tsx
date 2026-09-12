@@ -1,38 +1,40 @@
-import React, { useState } from 'react';
-import { Search, Filter, Star, MapPin, CheckCircle2, ArrowLeft, Wrench, Globe, Phone } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
-import { WorkerSkill } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, Star, MapPin, CheckCircle2, ArrowLeft, Wrench, Globe, Phone, Loader2 } from 'lucide-react';
+import { apiClient } from '../../services/apiClient';
 
 export const FindWorkersPage: React.FC<{ navigate: (r: string) => void }> = ({ navigate }) => {
-  const { users } = useAuth();
-  const { jobs } = useApp();
-
   const [search, setSearch] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<string>('All');
   const [selectedLocation, setSelectedLocation] = useState<string>('All');
+  const [freelancers, setFreelancers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const freelancers = users
-    .filter(u => u.role === 'freelancer' && u.freelancerProfile)
-    .map(u => ({
-      ...u.freelancerProfile!,
-      id: u.id,
-      name: u.name,
-      mobile: u.mobile
-    }));
-
-  const filtered = freelancers.filter(f => {
-    const q = search.toLowerCase();
-    const matchQ = f.name.toLowerCase().includes(q) ||
-      f.primarySkill.toLowerCase().includes(q) ||
-      f.location.toLowerCase().includes(q) ||
-      f.freelancerId.toLowerCase().includes(q);
-
-    const matchSkill = selectedSkill === 'All' || f.primarySkill === selectedSkill;
-    const matchLoc = selectedLocation === 'All' || f.location.toLowerCase().includes(selectedLocation.toLowerCase());
-
-    return matchQ && matchSkill && matchLoc;
-  });
+  // Database-backed search query
+  useEffect(() => {
+    let active = true;
+    async function fetchWorkers() {
+      setLoading(true);
+      try {
+        const res = await apiClient.getFreelancers({
+          search: search.trim() || undefined,
+          category: selectedSkill !== 'All' ? selectedSkill : undefined,
+          location: selectedLocation !== 'All' ? selectedLocation : undefined
+        });
+        if (active && res.freelancers) {
+          setFreelancers(res.freelancers);
+        }
+      } catch (err) {
+        console.error('Error querying freelancers from database:', err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    const timer = setTimeout(fetchWorkers, 200);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [search, selectedSkill, selectedLocation]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -109,79 +111,94 @@ export const FindWorkersPage: React.FC<{ navigate: (r: string) => void }> = ({ n
         </div>
       </div>
 
-      {/* Grid of workers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map(worker => (
-          <div key={worker.id} className="soft-box p-6 border-2 border-slate-200 flex flex-col justify-between hover:border-shramik-400 transition-all">
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-shramik-600 to-indigo-700 text-white font-bold flex items-center justify-center text-sm shadow-sm">
-                    {worker.name.charAt(0)}
+      {/* Loading & Results Grid */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-shramik-600" />
+          <p className="text-xs font-semibold">Querying SQLite database for verified freelancers...</p>
+        </div>
+      ) : freelancers.length === 0 ? (
+        <div className="soft-box p-12 text-center text-slate-500 border-2 border-dashed border-slate-200">
+          <Wrench className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+          <h3 className="font-extrabold text-navy-900 text-base">No Matching Freelancers Found</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            Try adjusting your search keyword, category, or location filter.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {freelancers.map(worker => (
+            <div key={worker.id || worker.freelancerId} className="soft-box p-6 border-2 border-slate-200 flex flex-col justify-between hover:border-shramik-400 transition-all">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-shramik-600 to-indigo-700 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+                      {worker.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-navy-900 text-base leading-tight">
+                        {worker.name}
+                      </h3>
+                      <span className="text-[11px] font-mono text-slate-400 font-bold">
+                        {worker.freelancerId}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>{worker.rating || 4.8}</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                  {worker.bio || 'Verified tradesperson ready for dispatch across Goa.'}
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">Primary Trade:</span>
+                    <strong className="text-shramik-700">{worker.tradeCategory || worker.primarySkill}</strong>
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-navy-900 text-base leading-tight">
-                      {worker.name}
-                    </h3>
-                    <span className="text-[11px] font-mono text-slate-400 font-bold">
-                      {worker.freelancerId}
-                    </span>
+                    <span className="text-slate-400 text-[10px] block">Experience:</span>
+                    <strong className="text-slate-800">{worker.experienceYears || 1} Years</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">Location:</span>
+                    <strong className="text-slate-800">{worker.location}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">Daily Rate:</span>
+                    <strong className="text-slate-900">₹{worker.dailyRate || 800}/day</strong>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  <span>{worker.rating}</span>
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {(worker.skills || worker.additionalSkills || []).slice(0, 3).map((skill: string) => (
+                    <span key={skill} className="bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                      {skill}
+                    </span>
+                  ))}
                 </div>
               </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
-                {worker.bio}
-              </p>
+              <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 font-semibold">
+                  {worker.completedJobs !== undefined ? worker.completedJobs : (worker.jobsCompleted || 0)} Jobs Completed
+                </span>
 
-              <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Primary Trade:</span>
-                  <strong className="text-shramik-700">{worker.primarySkill}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Experience:</span>
-                  <strong className="text-slate-800">{worker.experienceYears} Years</strong>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Location:</span>
-                  <strong className="text-slate-800">{worker.location}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Availability:</span>
-                  <strong className="text-emerald-700 uppercase">{worker.availability}</strong>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-1 pt-1">
-                {worker.additionalSkills.slice(0, 3).map(skill => (
-                  <span key={skill} className="bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-0.5 rounded-md">
-                    {skill}
-                  </span>
-                ))}
+                <button
+                  onClick={() => navigate('/customer/create-work')}
+                  className="tactile-btn-secondary text-xs font-bold px-3 py-1.5"
+                >
+                  Hire Worker
+                </button>
               </div>
             </div>
-
-            <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-semibold">
-                {worker.jobsCompleted} Jobs Completed
-              </span>
-
-              <button
-                onClick={() => navigate('/customer/create-work')}
-                className="tactile-btn-secondary text-xs font-bold px-3 py-1.5"
-              >
-                Hire Worker
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
     </div>
   );

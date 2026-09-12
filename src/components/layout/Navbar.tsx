@@ -89,6 +89,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
                 >
                   {t.hero.howItWorks}
                 </button>
+                <button
+                  onClick={() => handleNav('/quotes')}
+                  className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                    currentRoute === '/quotes' ? 'text-shramik-600 bg-shramik-50 font-bold' : 'text-slate-600 hover:text-navy-900'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Quotes AI</span>
+                </button>
               </>
             )}
 
@@ -375,6 +384,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
                   className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50"
                 >
                   {t.hero.howItWorks}
+                </button>
+                <button
+                  onClick={() => handleNav('/quotes')}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-shramik-700 bg-shramik-50 hover:bg-shramik-100 flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span>Semantic Quotes AI</span>
                 </button>
                 <button
                   onClick={() => handleNav('/login')}

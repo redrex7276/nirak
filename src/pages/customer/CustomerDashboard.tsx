@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   PlusCircle, 
   Users, 
@@ -9,18 +9,94 @@ import {
   MapPin, 
   Calendar, 
   IndianRupee, 
-  Smartphone,
-  ChevronRight,
-  ShieldCheck
+  Smartphone, 
+  ChevronRight, 
+  ShieldCheck, 
+  Search, 
+  Filter, 
+  Loader2, 
+  X 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
+import { apiClient } from '../../services/apiClient';
+import { Job } from '../../types';
 
 export const CustomerDashboard: React.FC<{ navigate: (r: string) => void }> = ({ navigate }) => {
   const { currentUser } = useAuth();
   const { jobs, applications, toggleSMSPanel, smsMessages } = useApp();
 
   const customerJobs = jobs.filter(j => j.customerId === currentUser?.id);
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>(customerJobs);
+  const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const performSearch = async () => {
+      setIsSearching(true);
+      try {
+        const res = await apiClient.getJobs({
+          search: searchQuery.trim() || undefined,
+          status: statusFilter !== 'ALL' ? statusFilter : undefined,
+          customerId: currentUser?.id
+        });
+        if (!isCancelled) {
+          if (res && res.jobs) {
+            setFilteredJobs(res.jobs);
+          } else {
+            // Fallback to in-memory customerJobs filter
+            let list = customerJobs;
+            if (searchQuery.trim()) {
+              const q = searchQuery.toLowerCase();
+              list = list.filter(j => 
+                j.title.toLowerCase().includes(q) || 
+                j.location.toLowerCase().includes(q) || 
+                j.description.toLowerCase().includes(q) ||
+                j.category.toLowerCase().includes(q)
+              );
+            }
+            if (statusFilter !== 'ALL') {
+              list = list.filter(j => j.status.toUpperCase() === statusFilter);
+            }
+            setFilteredJobs(list);
+          }
+        }
+      } catch (err) {
+        console.warn('Backend search error, falling back to local list:', err);
+        if (!isCancelled) {
+          let list = customerJobs;
+          if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            list = list.filter(j => 
+              j.title.toLowerCase().includes(q) || 
+              j.location.toLowerCase().includes(q) || 
+              j.description.toLowerCase().includes(q)
+            );
+          }
+          if (statusFilter !== 'ALL') {
+            list = list.filter(j => j.status.toUpperCase() === statusFilter);
+          }
+          setFilteredJobs(list);
+        }
+      } finally {
+        if (!isCancelled) setIsSearching(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      performSearch();
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, statusFilter, jobs, currentUser?.id]);
 
   // Stats calculation
   const activeJobsCount = customerJobs.filter(j => j.status !== 'completed' && j.status !== 'cancelled').length;
@@ -123,12 +199,73 @@ export const CustomerDashboard: React.FC<{ navigate: (r: string) => void }> = ({
           </div>
 
           <button
-            onClick={() => navigate('/customer/work')}
+            onClick={() => {
+              setSearchQuery('');
+              setStatusFilter('ALL');
+            }}
             className="text-xs font-bold text-shramik-600 hover:text-shramik-800 flex items-center gap-1"
           >
-            <span>View All ({customerJobs.length})</span>
-            <ChevronRight className="w-4 h-4" />
+            <span>Reset Filters ({customerJobs.length} Total)</span>
           </button>
+        </div>
+
+        {/* Database Search & Filter Toolbar */}
+        <div className="soft-box p-4 border border-slate-200 bg-white/80 backdrop-blur space-y-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search jobs by keyword, trade, or location (e.g. Painting, Mapusa)..."
+                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-navy-900 focus:bg-white focus:border-shramik-500 focus:outline-none transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+              <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0 hidden sm:block" />
+              {(['ALL', 'OPEN', 'ASSIGNED', 'COMPLETED'] as const).map(st => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-all ${
+                    statusFilter === st
+                      ? 'bg-navy-900 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {st === 'ALL' ? 'All Status' : st}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+            <span className="flex items-center gap-1.5">
+              {isSearching ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin text-shramik-600" />
+                  <span>Searching persistent database...</span>
+                </>
+              ) : (
+                <span>Showing {filteredJobs.length} {filteredJobs.length === 1 ? 'project' : 'projects'}</span>
+              )}
+            </span>
+            {searchQuery && (
+              <span className="font-semibold text-shramik-700">
+                Filtered by "{searchQuery}"
+              </span>
+            )}
+          </div>
         </div>
 
         {customerJobs.length === 0 ? (
@@ -146,9 +283,26 @@ export const CustomerDashboard: React.FC<{ navigate: (r: string) => void }> = ({
               <span>Create Work Request</span>
             </button>
           </div>
+        ) : filteredJobs.length === 0 ? (
+          <div className="soft-box p-8 text-center space-y-3 border border-slate-200">
+            <Search className="w-8 h-8 text-slate-300 mx-auto" />
+            <h4 className="font-bold text-navy-900 text-sm">No jobs match your search</h4>
+            <p className="text-xs text-slate-500">
+              Try adjusting your search terms or clearing the filter.
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('ALL');
+              }}
+              className="tactile-btn-secondary text-xs px-4 py-2 font-bold"
+            >
+              Clear Search
+            </button>
+          </div>
         ) : (
           <div className="space-y-4">
-            {customerJobs.map(job => {
+            {filteredJobs.map(job => {
               const jobApps = applications.filter(a => a.jobId === job.id);
               const sentCount = jobApps.filter(a => a.status === 'sent').length;
               const detailsCount = jobApps.filter(a => a.status === 'details_requested').length;
