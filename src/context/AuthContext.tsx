@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanId = identifier.trim().toLowerCase();
     const cleanMobile = identifier.trim().replace(/\s+/g, '');
 
-    const found = users.find(u => 
+    const found = users.find(u =>
       u.id.toLowerCase() === cleanId ||
       u.mobile.replace(/\s+/g, '') === cleanMobile ||
       (u.email && u.email.toLowerCase() === cleanId) ||
@@ -68,9 +68,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, user: found };
     }
 
-    return { 
-      success: false, 
-      error: 'Account not found. Please register or check your mobile / email.' 
+    return {
+      success: false,
+      error: 'Account not found. Please register or check your mobile / email.'
     };
   };
 
