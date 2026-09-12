@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /customer/
+Disallow: /freelancer/
