@@ -119,22 +119,18 @@ $$\text{Score} = (0.40 \times \text{Skill}) + (0.20 \times \text{Location}) + (0
 - Calculates proximity across North & South Goa hubs (Mapusa, Porvorim, Assagao, Siolim, Panaji, Margao).
 - Ranks verified craft experience and active availability status.
 
-### 3. 🤖 Three.js 3D Construction Robot Mascot
-- Custom WebGL interactive 3D mascot rendered on the landing page hero.
-- Interactive mouse-tracking head orientation, animated waving arm with elbow pivot geometry, and high-visibility safety helmet.
-
-### 4. 💡 Semantic Quotes AI & Wage Guide
+### 5. 💡 Semantic Quotes AI & Wage Guide
 - Market wage benchmarking and pricing estimation engine for Goa's construction and hospitality ecosystem.
 - Category benchmarks for Painters, Plumbers, Carpenters, Masons, Electricians, Welders, and Deep Cleaners.
 
-### 5. 🏢 Customer Directory & Gigs Marketplace
+### 6. 🏢 Customer Directory & Gigs Marketplace
 - Interactive directory of registered customer categories: Civil Contractors, Interior Design Studios, Commercial Facilities, Heritage Villa Owners, and Beach Resorts.
 - Search and filter open gigs and submit customized service proposals with daily rates.
 
-### 6. 🤖 Shramik AI Assistant Chatbot
+### 7. 🤖 Shramik AI Assistant Chatbot
 - Floating AI assistant with 2D knowledge retrieval explaining zero-data SMS workflows, local wage rates, and hiring guidelines.
 
-### 7. 🔒 Dual Relational & Cloud Persistence
+### 8. 🔒 Dual Relational & Cloud Persistence
 - **Primary Backend**: Node.js + Express with an SQLite relational database (`better-sqlite3`) for strict transactions, foreign key integrity, and ACID guarantees.
 - **Cloud Database**: Cloud Firestore mirroring for real-time client sync and multi-client updates.
 
@@ -154,42 +150,13 @@ $$\text{Score} = (0.40 \times \text{Skill}) + (0.20 \times \text{Location}) + (0
 
 ---
 
-## 🚀 Quick Start for Hackathon Judges (Under 2 Minutes)
-
-### Prerequisites
-- **Node.js**: Version 18+ (tested on Node 20 / 22 / 24)
-- **npm**: Version 9+
-
-### 1. Clone & Install
-```bash
-git clone https://github.com/redrex7276/nirak.git
-cd nirak
-npm install
-```
-
-### 2. Start Dev Environment
-Run a single command to start **both** the backend API server and the frontend client concurrently:
-```bash
-npm run dev
-```
-
-The unified runner ([scripts/dev.ts](scripts/dev.ts)) automatically:
-- Starts the **Express & SQLite backend server** on `http://localhost:3001`
-- Runs database migrations and seeds initial Goa trade data
-- Starts the **Vite frontend application** on `http://localhost:5173`
-
-Open your browser at: **[http://localhost:5173](http://localhost:5173)**
-
----
-
 ## 📋 Hackathon Judge Evaluation Walkthrough (Step-by-Step)
 
 Follow this scripted 5-minute evaluation flow to test all core functionality:
 
-### Step 1: Landing Page & 3D Mascot
-1. Open `http://localhost:5173`.
-2. Move your cursor over the hero banner to watch the **3D Construction Robot Mascot** track your mouse and wave.
-3. Switch platform languages between **ENG**, **हिंदी**, and **मराठी** in the top navbar.
+### Step 1: Landing Page
+1. Open `https://shramik-quote.web.app`.
+2. Switch platform languages between **ENG**, **हिंदी**, and **मराठी** in the top navbar.
 
 ### Step 2: 1-Click Persona Login
 1. Click the **"Demo Persona"** dropdown in the top navbar.
