@@ -110,7 +110,7 @@ export const smsService = new MockSMSProvider();
  * accepted             (already accepted)       rejected            prompt
  */
 export function evaluateSMSStateTransition(
-  currentStatus: ApplicationStatus,
+  currentStatus: ApplicationStatus | string,
   incomingCommand: '1' | '0' | 'INVALID'
 ): {
   nextStatus: ApplicationStatus | null;
@@ -125,7 +125,8 @@ export function evaluateSMSStateTransition(
     };
   }
 
-  if (currentStatus === 'sent') {
+  // Initial opportunity stage
+  if (currentStatus === 'sent' || currentStatus === 'sms_sent') {
     if (incomingCommand === '1') {
       return {
         nextStatus: 'details_requested',
@@ -139,7 +140,8 @@ export function evaluateSMSStateTransition(
     }
   }
 
-  if (currentStatus === 'details_requested') {
+  // Job details viewed stage
+  if (currentStatus === 'details_requested' || currentStatus === 'details_sent') {
     if (incomingCommand === '1') {
       return {
         nextStatus: 'accepted',
@@ -153,6 +155,7 @@ export function evaluateSMSStateTransition(
     }
   }
 
+  // Accepted stage
   if (currentStatus === 'accepted') {
     if (incomingCommand === '0') {
       return {
@@ -162,7 +165,48 @@ export function evaluateSMSStateTransition(
     }
     return {
       nextStatus: 'accepted',
-      outgoingStep: 'info'
+      outgoingStep: 'acceptance'
+    };
+  }
+
+  // Assigned stage
+  if (currentStatus === 'assigned') {
+    if (incomingCommand === '0') {
+      return {
+        nextStatus: 'rejected',
+        outgoingStep: 'acceptance'
+      };
+    }
+    return {
+      nextStatus: 'assigned',
+      outgoingStep: 'acceptance'
+    };
+  }
+
+  // Rejected stage (re-engaging)
+  if (currentStatus === 'rejected') {
+    if (incomingCommand === '1') {
+      return {
+        nextStatus: 'details_requested',
+        outgoingStep: 'details'
+      };
+    }
+    return {
+      nextStatus: 'rejected',
+      outgoingStep: 'acceptance'
+    };
+  }
+
+  // Default fallback for any unknown status: reply 1 -> details, 0 -> rejected
+  if (incomingCommand === '1') {
+    return {
+      nextStatus: 'details_requested',
+      outgoingStep: 'details'
+    };
+  } else if (incomingCommand === '0') {
+    return {
+      nextStatus: 'rejected',
+      outgoingStep: 'acceptance'
     };
   }
 
