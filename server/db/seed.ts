@@ -92,14 +92,35 @@ export function runSeed() {
         name: 'Rajesh Sharma',
         email: 'rajesh@sharmaconstruction.com',
         phone: '+91 98200 11223',
-        org: 'Sharma Construction Co.'
+        org: 'Goa Civil & Infra Projects Ltd'
       },
       {
         id: 'cust-2',
         name: 'Anita Desai',
         email: 'anita@desaiinteriors.com',
         phone: '+91 98200 22334',
-        org: 'Desai Interiors & Renovations'
+        org: 'Desai Interiors & Luxury Living'
+      },
+      {
+        id: 'cust-3',
+        name: 'Vikram Singhania',
+        email: 'vikram.s@coastalhubs.in',
+        phone: '+91 98111 77654',
+        org: 'Coastal Hubs & Retail Plazas'
+      },
+      {
+        id: 'cust-4',
+        name: 'Dr. Sneha Patil',
+        email: 'sneha.patil@heritagevilla.org',
+        phone: '+91 98450 88219',
+        org: 'Assagao Heritage Villa Estates'
+      },
+      {
+        id: 'cust-5',
+        name: 'Karan Malhotra',
+        email: 'karan.m@sunandsandgoa.com',
+        phone: '+91 98332 66541',
+        org: 'Sun & Sand Beachfront Resorts'
       }
     ];
 
@@ -250,6 +271,66 @@ export function runSeed() {
         exp: 4,
         lang: 'en',
         skills: ['Door Frame Fitting', 'Furniture Assembly', 'Modular Kitchens']
+      },
+      {
+        id: 'job-104',
+        customerId: 'cust-3',
+        customerName: 'Vikram Singhania',
+        customerPhone: '+91 98111 77654',
+        title: 'Commercial Plaza 3-Phase Electrical Rewiring & DG Backup Overhaul',
+        category: 'Mechanic',
+        description: 'Main distribution board overhaul, 3-phase balancing, circuit breaker testing, and 125kVA diesel generator engine oil/filter servicing for commercial retail mall.',
+        location: 'Panjim Coastal Highway, Goa',
+        startDate: '2026-09-22',
+        durationDays: 2,
+        reportingTime: '07:30 AM',
+        workersRequired: 3,
+        paymentType: 'daily',
+        paymentAmount: 950,
+        status: 'open',
+        exp: 5,
+        lang: 'mr',
+        skills: ['Diesel Generator Repair', 'Concrete Mixer Engine', 'Hydraulic Pumps']
+      },
+      {
+        id: 'job-105',
+        customerId: 'cust-4',
+        customerName: 'Dr. Sneha Patil',
+        customerPhone: '+91 98450 88219',
+        title: 'Portuguese Villa Red Laterite Stone Boundary Wall & Plastering',
+        category: 'Mason',
+        description: 'Chiseling and laying red laterite stone blocks with lime mortar mix, leveling compound wall, and applying weather-resistant exterior plaster.',
+        location: 'Assagao, Goa',
+        startDate: '2026-09-21',
+        durationDays: 4,
+        reportingTime: '08:00 AM',
+        workersRequired: 2,
+        paymentType: 'daily',
+        paymentAmount: 850,
+        status: 'open',
+        exp: 5,
+        lang: 'mr',
+        skills: ['Red Laterite Masonry', 'Level Plastering', 'Stone Chisel']
+      },
+      {
+        id: 'job-106',
+        customerId: 'cust-5',
+        customerName: 'Karan Malhotra',
+        customerPhone: '+91 98332 66541',
+        title: 'Beachfront Wooden Deck Polishing & Anti-Moisture Sealing',
+        category: 'Carpenter',
+        description: 'Sanding 2,400 sq ft exterior teak deck, replacing rusted brass screws, and applying 2 coats of marine-grade polyurethane anti-moisture sealant ahead of tourist season.',
+        location: 'Calangute Beach Road, Goa',
+        startDate: '2026-09-23',
+        durationDays: 3,
+        reportingTime: '08:00 AM',
+        workersRequired: 2,
+        paymentType: 'daily',
+        paymentAmount: 850,
+        status: 'open',
+        exp: 3,
+        lang: 'hi',
+        skills: ['Door Frame Fitting', 'Furniture Assembly']
       },
       {
         id: 'job-past-1',

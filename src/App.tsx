@@ -14,6 +14,7 @@ import { FreelancerRegisterPage } from './pages/auth/FreelancerRegisterPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
 import { QuotesPage } from './pages/QuotesPage';
+import { CustomerDirectoryPage } from './pages/CustomerDirectoryPage';
 
 import { CustomerDashboard } from './pages/customer/CustomerDashboard';
 import { CreateWorkPage } from './pages/customer/CreateWorkPage';
@@ -91,6 +92,9 @@ function RouterShell() {
     }
     if (currentRoute === '/quotes') {
       return <QuotesPage navigate={navigate} />;
+    }
+    if (currentRoute === '/customers' || currentRoute === '/customer-directory' || currentRoute === '/gigs') {
+      return <CustomerDirectoryPage navigate={navigate} />;
     }
 
     // Route protection enforcement

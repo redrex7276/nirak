@@ -36,16 +36,5 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
-  },
-  "auth": {
-    "authorizedDomains": [
-      "localhost",
-      "shramik-quote.web.app",
-      "shramik-quote.firebaseapp.com"
-    ],
-    "providers": {
-      "emailPassword": true,
-      "googleSignIn": true
-    }
   }
 }

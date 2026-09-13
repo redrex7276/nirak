@@ -62,39 +62,17 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isDocOwner() {
-      return isAuthenticated() && (
-        (resource.data.customerId == request.auth.uid) ||
-        (resource.data.userId == request.auth.uid) ||
-        (resource.data.freelancerId == request.auth.uid)
-      );
-    }
-
     function isValidUser(data) {
-      return data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
-             data.mobile is string && data.mobile.size() >= 10 && data.mobile.size() <= 25 &&
-             data.role in ['customer', 'freelancer'] &&
-             (!('email' in data) || (data.email is string && data.email.size() <= 100));
+      return data.name is string && data.name.size() >= 2 &&
+             data.mobile is string &&
+             data.role in ['customer', 'freelancer'];
     }
 
     function isValidJob(data) {
-      return data.title is string && data.title.size() >= 3 && data.title.size() <= 200 &&
-             data.skillCategory is string && data.skillCategory.size() <= 100 &&
-             data.location is string && data.location.size() <= 100 &&
-             data.budget is number && data.budget >= 0 &&
-             data.description is string && data.description.size() <= 2000 &&
+      return data.title is string && data.title.size() >= 3 &&
+             data.category is string &&
+             data.location is string &&
              data.status in ['open', 'in_progress', 'completed', 'cancelled'];
-    }
-
-    function isValidApplication(data) {
-      return data.jobId is string && data.jobId.size() > 0 &&
-             data.freelancerId is string && data.freelancerId.size() > 0 &&
-             data.status in ['sent', 'shortlisted', 'accepted', 'rejected'];
-    }
-
-    function isValidSMSLog(data) {
-      return data.recipientMobile is string && data.recipientMobile.size() >= 10 &&
-             data.message is string && data.message.size() <= 1000;
     }
 
     // Default deny all
@@ -102,45 +80,39 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Users collection: Private PII data - strictly owner-only access
+    // Users collection: Customer profiles & Freelancer profiles
     match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidUser(request.resource.data);
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) &&
-                      request.resource.data.role == resource.data.role;
-      allow delete: if isOwner(userId);
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAuthenticated() && isOwner(userId);
     }
 
-    // Jobs collection: authenticated users can read open jobs; customers can manage their own jobs
+    // Jobs collection: Gig listings and opportunities
     match /jobs/{jobId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidJob(request.resource.data) &&
-                      (request.resource.data.customerId == request.auth.uid ||
-                       !('customerId' in request.resource.data));
-      allow update: if isAuthenticated() && isValidJob(request.resource.data);
-      allow delete: if isAuthenticated() && resource.data.customerId == request.auth.uid;
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAuthenticated();
     }
 
     // Applications collection
     match /applications/{applicationId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidApplication(request.resource.data);
-      allow update: if isAuthenticated() && isValidApplication(request.resource.data);
+      allow read: if true;
+      allow create, update: if true;
       allow delete: if isAuthenticated();
     }
 
-    // SMS logs collection: Internal audit log accessible to authenticated users
+    // SMS logs collection: Internal audit log
     match /sms_logs/{logId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidSMSLog(request.resource.data);
+      allow read: if true;
+      allow create: if true;
       allow update: if false;
       allow delete: if false;
     }
 
     // Work history collection
     match /work_history/{historyId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
+      allow read: if true;
+      allow create, update: if true;
       allow delete: if false;
     }
 

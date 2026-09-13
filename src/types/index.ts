@@ -15,7 +15,15 @@ export type WorkerSkill =
   | 'Agricultural'
   | 'Other';
 
-export type CustomerType = 'individual' | 'contractor' | 'business' | 'other';
+export type CustomerType = 
+  | 'individual' 
+  | 'contractor' 
+  | 'business' 
+  | 'other'
+  | 'interior_designer'
+  | 'facility_manager'
+  | 'homeowner'
+  | 'resort_manager';
 
 export type WorkerAvailability = 'available' | 'busy' | 'on_leave';
 
@@ -36,6 +44,10 @@ export interface CustomerProfile {
   customerType: CustomerType;
   businessName?: string;
   cityArea: string;
+  description?: string;
+  frequentGigsNeeded?: string[];
+  budgetRange?: string;
+  typicalWorkerCount?: string;
 }
 
 export interface FreelancerProfile {

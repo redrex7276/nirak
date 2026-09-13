@@ -90,6 +90,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
                   {t.hero.howItWorks}
                 </button>
                 <button
+                  onClick={() => handleNav('/customers')}
+                  className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                    currentRoute === '/customers' ? 'text-shramik-600 bg-shramik-50 font-bold' : 'text-slate-600 hover:text-navy-900'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-shramik-600" />
+                  <span>Customers & Gigs</span>
+                </button>
+                <button
                   onClick={() => handleNav('/quotes')}
                   className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5 ${
                     currentRoute === '/quotes' ? 'text-shramik-600 bg-shramik-50 font-bold' : 'text-slate-600 hover:text-navy-900'
@@ -137,6 +146,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
                   My Projects
                 </button>
                 <button
+                  onClick={() => handleNav('/customers')}
+                  className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                    currentRoute === '/customers' ? 'text-shramik-600 bg-shramik-50 font-bold' : 'text-slate-600 hover:text-navy-900'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-shramik-600" />
+                  <span>Customers & Gigs</span>
+                </button>
+                <button
                   onClick={() => handleNav('/customer/history')}
                   className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
                     currentRoute === '/customer/history' ? 'text-shramik-600 bg-shramik-50 font-bold' : 'text-slate-600 hover:text-navy-900'
@@ -164,6 +182,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
                   }`}
                 >
                   {t.nav.myWork}
+                </button>
+                <button
+                  onClick={() => handleNav('/customers')}
+                  className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                    currentRoute === '/customers' ? 'text-shramik-600 bg-shramik-50 font-bold' : 'text-slate-600 hover:text-navy-900'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-shramik-600" />
+                  <span>Customers & Gigs</span>
                 </button>
                 <button
                   onClick={() => handleNav('/freelancer/history')}
@@ -204,16 +231,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
               ))}
             </div>
 
-            {/* Live SMS Drawer Toggle */}
+            {/* Messages Drawer Toggle */}
             <button
               onClick={toggleSMSPanel}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-navy-900 text-white hover:bg-navy-800 active:scale-95 transition-all shadow-sm"
-              title="Toggle Live SMS Gateway Activity Stream"
+              title="Open Messages & SMS Gateway"
             >
               <Smartphone className="w-3.5 h-3.5 text-amber-400" />
-              <span>SMS Stream</span>
+              <span>Messages</span>
               {smsMessages.length > 0 && (
-                <span className="bg-amber-400 text-navy-950 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold">
+                <span className="bg-emerald-500 text-white px-1.5 py-0.2 rounded-full text-[10px] font-extrabold">
                   {smsMessages.length}
                 </span>
               )}
@@ -386,6 +413,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
                   {t.hero.howItWorks}
                 </button>
                 <button
+                  onClick={() => handleNav('/customers')}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4 text-shramik-600" />
+                  <span>Customers & Gigs</span>
+                </button>
+                <button
                   onClick={() => handleNav('/quotes')}
                   className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-shramik-700 bg-shramik-50 hover:bg-shramik-100 flex items-center gap-2"
                 >
@@ -434,6 +468,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
                   My Projects
                 </button>
                 <button
+                  onClick={() => handleNav('/customers')}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4 text-shramik-600" />
+                  <span>Customers & Gigs</span>
+                </button>
+                <button
                   onClick={() => handleNav('/customer/history')}
                   className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50"
                 >
@@ -461,6 +502,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, navigate }) => {
                   className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50"
                 >
                   {t.nav.myWork}
+                </button>
+                <button
+                  onClick={() => handleNav('/customers')}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4 text-shramik-600" />
+                  <span>Customers & Gigs</span>
                 </button>
                 <button
                   onClick={() => handleNav('/freelancer/history')}
