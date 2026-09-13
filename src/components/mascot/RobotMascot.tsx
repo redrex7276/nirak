@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { Sparkles, MousePointer, Hand } from 'lucide-react';
+import { Sparkles, MousePointer } from 'lucide-react';
 
 interface RobotMascotProps {
   className?: string;
@@ -14,7 +14,6 @@ export const RobotMascot: React.FC<RobotMascotProps> = ({
   interactiveHint = true
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isWaving, setIsWaving] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -341,8 +340,6 @@ export const RobotMascot: React.FC<RobotMascotProps> = ({
     const mouse = { x: 0, y: 0 };
     const targetRotation = { headX: 0, headY: 0, torsoX: 0, torsoY: 0 };
     let lastMouseMoveTime = performance.now();
-    let wavingActive = false;
-    let waveStartTime = 0;
 
     const handleMouseMove = (e: MouseEvent) => {
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -358,15 +355,8 @@ export const RobotMascot: React.FC<RobotMascotProps> = ({
       }
     };
 
-    const triggerWave = () => {
-      wavingActive = true;
-      waveStartTime = performance.now();
-      setIsWaving(true);
-    };
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    container.addEventListener('click', triggerWave);
 
     // 7. Responsive Resize Observer
     const handleResize = () => {
@@ -429,31 +419,12 @@ export const RobotMascot: React.FC<RobotMascotProps> = ({
       eyeGroup.position.x = THREE.MathUtils.lerp(eyeGroup.position.x, targetRotation.headY * 0.08, 0.1);
       eyeGroup.position.y = THREE.MathUtils.lerp(eyeGroup.position.y, -targetRotation.headX * 0.06, 0.1);
 
-      // Wave animation - lifted forward and up so hand is 100% visible in front of the robot's face
-      if (wavingActive) {
-        const waveElapsed = (now - waveStartTime) / 1000;
-        if (waveElapsed < 2.0) {
-          // Upper arm swings forward (+Z) and slightly outward
-          rightArmPivot.rotation.x = THREE.MathUtils.lerp(rightArmPivot.rotation.x, -1.35, 0.18);
-          rightArmPivot.rotation.z = THREE.MathUtils.lerp(rightArmPivot.rotation.z, -0.35, 0.18);
-          rightArmPivot.rotation.y = THREE.MathUtils.lerp(rightArmPivot.rotation.y, 0.45, 0.18);
-
-          // Forearm bends straight up towards eye level in front of the body
-          rightElbowPivot.rotation.x = THREE.MathUtils.lerp(rightElbowPivot.rotation.x, 1.5, 0.2);
-          // Forearm & hand wave back-and-forth left to right
-          rightElbowPivot.rotation.z = Math.sin(waveElapsed * 16) * 0.45;
-        } else {
-          wavingActive = false;
-          setIsWaving(false);
-        }
-      } else {
-        // Return smoothly to resting pose
-        rightArmPivot.rotation.x = THREE.MathUtils.lerp(rightArmPivot.rotation.x, 0.1 - Math.sin(elapsedTime * 1.8) * 0.05, 0.08);
-        rightArmPivot.rotation.z = THREE.MathUtils.lerp(rightArmPivot.rotation.z, -0.18, 0.08);
-        rightArmPivot.rotation.y = THREE.MathUtils.lerp(rightArmPivot.rotation.y, 0, 0.08);
-        rightElbowPivot.rotation.x = THREE.MathUtils.lerp(rightElbowPivot.rotation.x, 0, 0.08);
-        rightElbowPivot.rotation.z = THREE.MathUtils.lerp(rightElbowPivot.rotation.z, 0, 0.08);
-      }
+      // Natural idle arms breathing motion
+      rightArmPivot.rotation.x = THREE.MathUtils.lerp(rightArmPivot.rotation.x, 0.1 - Math.sin(elapsedTime * 1.8) * 0.05, 0.08);
+      rightArmPivot.rotation.z = THREE.MathUtils.lerp(rightArmPivot.rotation.z, -0.18, 0.08);
+      rightArmPivot.rotation.y = THREE.MathUtils.lerp(rightArmPivot.rotation.y, 0, 0.08);
+      rightElbowPivot.rotation.x = THREE.MathUtils.lerp(rightElbowPivot.rotation.x, 0, 0.08);
+      rightElbowPivot.rotation.z = THREE.MathUtils.lerp(rightElbowPivot.rotation.z, 0, 0.08);
 
       beaconMat.emissiveIntensity = 1.0 + Math.sin(elapsedTime * 6) * 0.6;
 
@@ -468,7 +439,6 @@ export const RobotMascot: React.FC<RobotMascotProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('resize', handleResize);
-      container.removeEventListener('click', triggerWave);
       resizeObserver.disconnect();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -493,17 +463,8 @@ export const RobotMascot: React.FC<RobotMascotProps> = ({
       {/* Interactive Floating Hint */}
       {interactiveHint && (
         <div className="absolute bottom-3 inset-x-0 mx-auto w-fit pointer-events-none flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-medium shadow-md transition-all">
-          {isWaving ? (
-            <>
-              <Hand className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
-              <span>Shramik Bot says hello!</span>
-            </>
-          ) : (
-            <>
-              <MousePointer className="w-3 h-3 text-cyan-400 animate-pulse" />
-              <span>Move cursor to track • Click to wave</span>
-            </>
-          )}
+          <MousePointer className="w-3 h-3 text-cyan-400 animate-pulse" />
+          <span>Move cursor to track head & eyes</span>
         </div>
       )}
     </div>

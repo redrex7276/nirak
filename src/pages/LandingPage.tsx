@@ -145,8 +145,8 @@ export const LandingPage: React.FC<{ navigate: (r: string) => void }> = ({ navig
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
                       Real-Time Cursor Tracking
                     </span>
-                    <span className="text-[11px] text-amber-300 font-semibold">
-                      Click robot to wave!
+                    <span className="text-[11px] text-cyan-300 font-semibold">
+                      Interactive 3D Mascot
                     </span>
                   </div>
                 </div>
