@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ArrowLeft, 
   CheckCircle2, 
@@ -32,7 +32,8 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
     assignWorker, 
     completeJob, 
     toggleSMSPanel, 
-    setSelectedWorkerForDemo 
+    setSelectedWorkerForDemo,
+    setSelectedJobIdForDemo 
   } = useApp();
 
   const { users } = useAuth();
@@ -84,10 +85,21 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
     setSelectedWorkerIds(first15);
   };
 
+  // Sync current job with demo SMS panel context
+  useEffect(() => {
+    if (job?.id) {
+      setSelectedJobIdForDemo(job.id);
+    }
+  }, [job?.id, setSelectedJobIdForDemo]);
+
   // Dispatch opportunities
   const handleSendOpportunities = async () => {
     if (!job || selectedWorkerIds.length === 0) return;
     setIsSending(true);
+    setSelectedJobIdForDemo(job.id);
+    if (selectedWorkerIds.length > 0) {
+      setSelectedWorkerForDemo(selectedWorkerIds[0]);
+    }
     await sendOpportunities(job.id, selectedWorkerIds);
     setIsSending(false);
     setActiveTab('responses');
@@ -205,7 +217,10 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
             )}
 
             <button
-              onClick={toggleSMSPanel}
+              onClick={() => {
+                setSelectedJobIdForDemo(job.id);
+                toggleSMSPanel();
+              }}
               className="tactile-btn-secondary text-xs font-bold flex items-center justify-center gap-2"
             >
               <Smartphone className="w-4 h-4 text-amber-500" />
@@ -459,7 +474,10 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
               </div>
 
               <button
-                onClick={toggleSMSPanel}
+                onClick={() => {
+                  setSelectedJobIdForDemo(job.id);
+                  toggleSMSPanel();
+                }}
                 className="text-xs font-bold text-shramik-600 bg-shramik-50 px-3 py-1.5 rounded-xl border border-shramik-200 hover:bg-shramik-100 flex items-center gap-1.5"
               >
                 <Smartphone className="w-3.5 h-3.5 text-amber-500" />
@@ -609,6 +627,7 @@ export const JobDetailsPage: React.FC<{ jobId: string; navigate: (r: string) => 
 
                         <button
                           onClick={() => {
+                            setSelectedJobIdForDemo(job.id);
                             setSelectedWorkerForDemo(app.workerId);
                             toggleSMSPanel();
                           }}

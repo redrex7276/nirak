@@ -45,6 +45,8 @@ interface AppContextType {
   toggleSMSPanel: () => void;
   selectedWorkerForDemo: string;
   setSelectedWorkerForDemo: (workerId: string) => void;
+  selectedJobIdForDemo: string;
+  setSelectedJobIdForDemo: (jobId: string) => void;
 
   createJob: (params: CreateJobParams) => Promise<Job>;
   sendOpportunities: (jobId: string, workerIds: string[]) => Promise<void>;
@@ -71,6 +73,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isSMSPanelOpen, setIsSMSPanelOpen] = useState(false);
   const [selectedWorkerForDemo, setSelectedWorkerForDemo] = useState<string>('SQ-F-1042'); // Defaults to Ramesh Naik
+  const [selectedJobIdForDemo, setSelectedJobIdForDemo] = useState<string>('');
 
   // Rehydrate jobs, applications, SMS logs, and history from SQLite backend database on mount
   useEffect(() => {
@@ -203,12 +206,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updated = [newJob, ...jobs];
     setJobs(updated);
+    setSelectedJobIdForDemo(newJob.id);
     firebaseService.syncJob(newJob);
     addToast('Work Created Successfully', `Created "${newJob.title}" in ${newJob.location}`, 'success');
     return newJob;
   };
 
   const sendOpportunities = async (jobId: string, workerIds: string[]): Promise<void> => {
+    setSelectedJobIdForDemo(jobId);
+    if (workerIds.length > 0) {
+      setSelectedWorkerForDemo(workerIds[0]);
+    }
+
     // 1. Dispatch via backend SQLite database
     try {
       await apiClient.dispatchOpportunities(jobId, workerIds);
@@ -307,6 +316,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return j;
     }));
 
+    setSelectedJobIdForDemo(jobId);
+    if (workerIds.length > 0) {
+      setSelectedWorkerForDemo(workerIds[0]);
+    }
+
     addToast(
       `${workerIds.length} Opportunities Dispatched`,
       `SMS sent to ${workerIds.length} freelancers in their preferred language.`,
@@ -341,7 +355,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const workerPhone = workerUser?.mobile || '+91 98000 00000';
     const workerLang = workerUser?.freelancerProfile?.preferredLanguage || 'en';
 
-    const currentApp = applications.find(a => a.jobId === jobId && a.workerId === workerId);
+    const currentApp = applications.find(a => 
+      a.jobId === jobId && 
+      (a.workerId === workerId || (workerUser && (a.workerId === workerUser.id || a.workerId === workerUser.freelancerProfile?.freelancerId)))
+    );
     if (!currentApp) {
       addToast('No Active Opportunity', 'Worker has not been sent an opportunity for this job.', 'warning');
       return;
@@ -520,7 +537,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Update application to assigned
     setApplications(prev => prev.map(a => {
-      if (a.jobId === jobId && a.workerId === workerId) {
+      if (a.jobId === jobId && (a.workerId === workerId || (workerUser && (a.workerId === workerUser.id || a.workerId === workerUser.freelancerProfile?.freelancerId)))) {
         return {
           ...a,
           status: 'assigned',
@@ -716,6 +733,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleSMSPanel,
         selectedWorkerForDemo,
         setSelectedWorkerForDemo,
+        selectedJobIdForDemo,
+        setSelectedJobIdForDemo,
         createJob,
         sendOpportunities,
         simulateWorkerReply,

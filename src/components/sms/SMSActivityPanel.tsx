@@ -5,19 +5,15 @@ import {
   ArrowLeft,
   X, 
   CheckCircle2, 
-  Clock, 
   Smartphone,
   Info,
   UserCheck,
   Search,
   CheckCheck,
-  Phone,
-  Briefcase,
-  MapPin,
-  Sparkles,
   ChevronRight,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Briefcase
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -32,7 +28,10 @@ export const SMSActivityPanel: React.FC = () => {
     applications,
     selectedWorkerForDemo,
     setSelectedWorkerForDemo,
-    assignWorker
+    selectedJobIdForDemo,
+    setSelectedJobIdForDemo,
+    assignWorker,
+    sendOpportunities
   } = useApp();
 
   const { users } = useAuth();
@@ -43,62 +42,138 @@ export const SMSActivityPanel: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<'threads' | 'chat'>('chat');
 
-  // Find active job for demo context (defaults to first open/sms_sent job)
-  const activeJob = jobs.find(j => j.status === 'sms_sent' || j.status === 'responses_received' || j.status === 'assigned') || jobs[0];
+  // Resolve active job dynamically: prioritized by selectedJobIdForDemo, recent SMS, recent application, or open/sms_sent status
+  const activeJob = useMemo(() => {
+    if (selectedJobIdForDemo) {
+      const found = jobs.find(j => j.id === selectedJobIdForDemo);
+      if (found) return found;
+    }
+    const latestMsg = [...smsMessages].sort((a, b) => (b.id > a.id ? 1 : -1))[0];
+    if (latestMsg?.jobId) {
+      const found = jobs.find(j => j.id === latestMsg.jobId);
+      if (found) return found;
+    }
+    const latestApp = [...applications].reverse()[0];
+    if (latestApp?.jobId) {
+      const found = jobs.find(j => j.id === latestApp.jobId);
+      if (found) return found;
+    }
+    return jobs.find(j => j.status === 'sms_sent' || j.status === 'responses_received' || j.status === 'assigned') || jobs[0];
+  }, [jobs, selectedJobIdForDemo, smsMessages, applications]);
 
-  // Candidates who have received SMS or are eligible workers
+  // Candidates who have received SMS or have active applications across jobs
   const candidateWorkers = useMemo(() => {
-    // 1. Workers with active applications
-    const appWorkers = applications
-      .filter(a => !activeJob || a.jobId === activeJob.id)
-      .map(a => {
-        const u = users.find(user => user.id === a.workerId || user.freelancerProfile?.freelancerId === a.workerId);
-        const lastMsg = [...smsMessages]
-          .filter(m => m.workerId === a.workerId)
-          .sort((x, y) => (y.id > x.id ? 1 : -1))[0];
+    const list: Array<{
+      id: string;
+      jobId: string;
+      jobTitle: string;
+      name: string;
+      mobile: string;
+      skill: string;
+      location: string;
+      status: string;
+      lastMessage: string;
+      lastTime: string;
+      unread: boolean;
+      messageCount: number;
+    }> = [];
 
-        return {
-          id: a.workerId,
-          name: u?.name || 'Worker',
-          mobile: u?.mobile || '+91 98220 12345',
+    const seen = new Set<string>();
+
+    // 1. Applications for the activeJob
+    if (activeJob) {
+      const activeApps = applications.filter(a => a.jobId === activeJob.id);
+      for (const app of activeApps) {
+        seen.add(`${activeJob.id}-${app.workerId}`);
+        const u = users.find(user => user.id === app.workerId || user.freelancerProfile?.freelancerId === app.workerId);
+        const msgs = smsMessages.filter(m => 
+          (m.jobId === activeJob.id || !m.jobId) &&
+          (m.workerId === app.workerId || m.workerId === u?.id || m.workerId === u?.freelancerProfile?.freelancerId || (u?.mobile && m.workerPhone && m.workerPhone.replace(/\D/g, '').endsWith(u.mobile.replace(/\D/g, '').slice(-8))))
+        );
+        const lastMsg = msgs[msgs.length - 1];
+
+        list.push({
+          id: app.workerId,
+          jobId: activeJob.id,
+          jobTitle: activeJob.title,
+          name: u?.name || lastMsg?.workerName || 'Worker',
+          mobile: u?.mobile || lastMsg?.workerPhone || '+91 98220 12345',
           skill: u?.freelancerProfile?.primarySkill || 'Craftsman',
           location: u?.location || 'Goa',
-          status: a.status,
+          status: app.status,
           lastMessage: lastMsg?.content || 'Opportunity sent via SMS',
           lastTime: lastMsg?.timestamp || 'Recently',
-          unread: lastMsg?.direction === 'incoming'
-        };
-      });
+          unread: lastMsg?.direction === 'incoming',
+          messageCount: msgs.length
+        });
+      }
+    }
 
-    if (appWorkers.length > 0) return appWorkers;
+    // 2. Applications from other jobs
+    const otherApps = applications.filter(a => !activeJob || a.jobId !== activeJob.id);
+    for (const app of otherApps) {
+      const key = `${app.jobId}-${app.workerId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
 
-    // Fallback: extract distinct workers from smsMessages
-    const workerIds = Array.from(new Set(smsMessages.map(m => m.workerId)));
-    if (workerIds.length > 0) {
-      return workerIds.map(wid => {
-        const u = users.find(user => user.id === wid || user.freelancerProfile?.freelancerId === wid);
-        const lastMsg = [...smsMessages]
-          .filter(m => m.workerId === wid)
-          .sort((x, y) => (y.id > x.id ? 1 : -1))[0];
-        const app = applications.find(a => a.workerId === wid);
+      const j = jobs.find(job => job.id === app.jobId);
+      const u = users.find(user => user.id === app.workerId || user.freelancerProfile?.freelancerId === app.workerId);
+      const msgs = smsMessages.filter(m => 
+        (m.jobId === app.jobId || !m.jobId) &&
+        (m.workerId === app.workerId || m.workerId === u?.id || m.workerId === u?.freelancerProfile?.freelancerId || (u?.mobile && m.workerPhone && m.workerPhone.replace(/\D/g, '').endsWith(u.mobile.replace(/\D/g, '').slice(-8))))
+      );
+      const lastMsg = msgs[msgs.length - 1];
 
-        return {
-          id: wid,
-          name: u?.name || lastMsg?.workerName || 'Worker',
-          mobile: u?.mobile || lastMsg?.workerPhone || '+91 98000 00000',
-          skill: u?.freelancerProfile?.primarySkill || 'Craftsman',
-          location: u?.location || 'Goa',
-          status: app?.status || 'sent',
-          lastMessage: lastMsg?.content || 'SMS thread started',
-          lastTime: lastMsg?.timestamp || 'Recently',
-          unread: lastMsg?.direction === 'incoming'
-        };
+      list.push({
+        id: app.workerId,
+        jobId: app.jobId,
+        jobTitle: j?.title || 'Work Opportunity',
+        name: u?.name || lastMsg?.workerName || 'Worker',
+        mobile: u?.mobile || lastMsg?.workerPhone || '+91 98220 12345',
+        skill: u?.freelancerProfile?.primarySkill || 'Craftsman',
+        location: u?.location || 'Goa',
+        status: app.status,
+        lastMessage: lastMsg?.content || 'Opportunity sent via SMS',
+        lastTime: lastMsg?.timestamp || 'Recently',
+        unread: lastMsg?.direction === 'incoming',
+        messageCount: msgs.length
       });
     }
 
-    // Default persona if completely empty
+    // 3. Workers with SMS messages but no explicit application record
+    for (const msg of smsMessages) {
+      if (!msg.workerId) continue;
+      const msgJobId = msg.jobId || activeJob?.id || 'job-1';
+      const key = `${msgJobId}-${msg.workerId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const j = jobs.find(job => job.id === msgJobId);
+      const u = users.find(user => user.id === msg.workerId || user.freelancerProfile?.freelancerId === msg.workerId);
+
+      list.push({
+        id: msg.workerId,
+        jobId: msgJobId,
+        jobTitle: j?.title || 'Work Opportunity',
+        name: u?.name || msg.workerName || 'Worker',
+        mobile: u?.mobile || msg.workerPhone || '+91 98000 00000',
+        skill: u?.freelancerProfile?.primarySkill || 'Craftsman',
+        location: u?.location || 'Goa',
+        status: 'sent',
+        lastMessage: msg.content,
+        lastTime: msg.timestamp,
+        unread: msg.direction === 'incoming',
+        messageCount: 1
+      });
+    }
+
+    if (list.length > 0) return list;
+
+    // 4. Default fallback persona
     return [{
       id: 'SQ-F-1042',
+      jobId: activeJob?.id || 'job-1',
+      jobTitle: activeJob?.title || 'Painting Project',
       name: 'Ramesh Naik',
       mobile: '+91 98221 54321',
       skill: 'Painter',
@@ -106,20 +181,57 @@ export const SMSActivityPanel: React.FC = () => {
       status: 'sent',
       lastMessage: 'Ready for opportunities',
       lastTime: 'Now',
-      unread: false
+      unread: false,
+      messageCount: 0
     }];
-  }, [applications, activeJob, users, smsMessages]);
+  }, [applications, activeJob, users, smsMessages, jobs]);
 
-  // Target worker
-  const currentWorkerId = selectedWorkerForDemo || candidateWorkers[0]?.id || 'SQ-F-1042';
-  const currentWorker = candidateWorkers.find(c => c.id === currentWorkerId) || candidateWorkers[0];
+  // Target worker selection
+  const currentWorker = useMemo(() => {
+    if (selectedWorkerForDemo) {
+      const found = candidateWorkers.find(c => 
+        c.id === selectedWorkerForDemo || 
+        users.some(u => 
+          (u.id === selectedWorkerForDemo || u.freelancerProfile?.freelancerId === selectedWorkerForDemo) && 
+          (u.id === c.id || u.freelancerProfile?.freelancerId === c.id)
+        )
+      );
+      if (found) return found;
+    }
+    const withMsgs = candidateWorkers.find(c => c.messageCount > 0);
+    return withMsgs || candidateWorkers[0];
+  }, [candidateWorkers, selectedWorkerForDemo, users]);
+
+  const currentWorkerId = currentWorker?.id || selectedWorkerForDemo || 'SQ-F-1042';
   const currentWorkerUser = users.find(u => u.id === currentWorkerId || u.freelancerProfile?.freelancerId === currentWorkerId);
-  const currentApplication = activeJob ? applications.find(a => a.jobId === activeJob.id && a.workerId === currentWorkerId) : null;
+  const currentApplication = activeJob ? applications.find(a => 
+    a.jobId === activeJob.id && 
+    (a.workerId === currentWorkerId || (currentWorkerUser && (a.workerId === currentWorkerUser.id || a.workerId === currentWorkerUser.freelancerProfile?.freelancerId)))
+  ) : null;
 
-  // Messages for currently selected worker
+  // Messages for currently selected worker (with flexible ID & phone matching)
   const workerMessages = useMemo(() => {
-    return smsMessages.filter(m => m.workerId === currentWorkerId);
-  }, [smsMessages, currentWorkerId]);
+    return smsMessages.filter(m => {
+      const matchesWorker = 
+        m.workerId === currentWorkerId ||
+        (currentWorkerUser && (m.workerId === currentWorkerUser.id || m.workerId === currentWorkerUser.freelancerProfile?.freelancerId)) ||
+        (currentWorker?.mobile && m.workerPhone && (
+          m.workerPhone.replace(/\D/g, '').endsWith(currentWorker.mobile.replace(/\D/g, '').slice(-8))
+        ));
+
+      if (!matchesWorker) return false;
+
+      if (activeJob && m.jobId) {
+        return m.jobId === activeJob.id;
+      }
+      return true;
+    });
+  }, [smsMessages, currentWorkerId, currentWorkerUser, currentWorker, activeJob]);
+
+  // Other workers with active messages
+  const otherWorkersWithMessages = useMemo(() => {
+    return candidateWorkers.filter(w => w.id !== currentWorkerId && w.messageCount > 0);
+  }, [candidateWorkers, currentWorkerId]);
 
   // Status mapping
   const getStatusBadge = (status: string) => {
@@ -139,11 +251,12 @@ export const SMSActivityPanel: React.FC = () => {
     }
   };
 
-  // Filtered workers list
+  // Filtered workers list for Inbox
   const filteredCandidates = candidateWorkers.filter(w => {
     const matchesSearch = 
       w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       w.skill.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      w.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
       w.mobile.includes(searchQuery);
 
     if (activeTab === 'accepted') {
@@ -155,9 +268,13 @@ export const SMSActivityPanel: React.FC = () => {
     return matchesSearch;
   });
 
-  const handleSendCustom = (textToSend?: string) => {
+  const handleSendCustom = async (textToSend?: string) => {
     const text = (textToSend !== undefined ? textToSend : customReply).trim();
     if (activeJob && text) {
+      if (!currentApplication && activeJob) {
+        // Automatically dispatch opportunity first so state transitions correctly
+        await sendOpportunities(activeJob.id, [currentWorkerId]);
+      }
       simulateWorkerReply(activeJob.id, currentWorkerId, text);
       if (textToSend === undefined) {
         setCustomReply('');
@@ -217,11 +334,11 @@ export const SMSActivityPanel: React.FC = () => {
       className={`fixed bottom-0 left-0 right-0 sm:right-auto sm:left-6 sm:bottom-6 z-50 flex flex-col bg-white border border-slate-300 sm:rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${
         isExpanded 
           ? 'w-full sm:w-[680px] h-[90vh]' 
-          : 'w-full sm:w-[460px] h-[580px] max-h-[85vh]'
+          : 'w-full sm:w-[480px] h-[600px] max-h-[85vh]'
       }`}
     >
-      {/* Header */}
-      <div className="bg-gradient-to-r from-navy-950 via-navy-900 to-slate-900 text-white px-4 py-3.5 flex items-center justify-between border-b border-navy-800 select-none">
+      {/* Top Header */}
+      <div className="bg-gradient-to-r from-navy-950 via-navy-900 to-slate-900 text-white px-4 py-3 flex items-center justify-between border-b border-navy-800 select-none">
         <div className="flex items-center gap-3">
           {viewMode === 'chat' && candidateWorkers.length > 1 && (
             <button
@@ -248,7 +365,7 @@ export const SMSActivityPanel: React.FC = () => {
             </div>
             <p className="text-[11px] text-slate-300">
               {viewMode === 'threads' 
-                ? `${candidateWorkers.length} active worker conversations`
+                ? `${candidateWorkers.length} active worker conversation${candidateWorkers.length === 1 ? '' : 's'}`
                 : `${currentWorker?.skill} • ${currentWorker?.mobile}`}
             </p>
           </div>
@@ -272,6 +389,38 @@ export const SMSActivityPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* Project Switcher Bar */}
+      <div className="bg-navy-950 text-slate-300 px-3.5 py-2 flex items-center justify-between text-xs border-b border-navy-800">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Briefcase className="w-3.5 h-3.5 text-shramik-400 shrink-0" />
+          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider shrink-0">Job:</span>
+          <select
+            value={activeJob?.id || ''}
+            onChange={(e) => {
+              const newJobId = e.target.value;
+              setSelectedJobIdForDemo(newJobId);
+              const jobWorker = candidateWorkers.find(c => c.jobId === newJobId);
+              if (jobWorker) {
+                setSelectedWorkerForDemo(jobWorker.id);
+              }
+            }}
+            className="bg-navy-900 hover:bg-navy-850 text-white font-bold text-xs px-2.5 py-1 rounded-xl border border-navy-700 focus:outline-none focus:ring-1 focus:ring-shramik-500 truncate max-w-[210px] sm:max-w-[300px] cursor-pointer"
+          >
+            {jobs.map(j => (
+              <option key={j.id} value={j.id}>
+                {j.title} ({j.location}) {j.status === 'sms_sent' ? '• Dispatched' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        {activeJob && (
+          <span className="text-[11px] font-semibold text-shramik-300 shrink-0 pl-2">
+            ₹{activeJob.paymentAmount}/day
+          </span>
+        )}
+      </div>
+
       {/* VIEW 1: CONVERSATIONS LIST (INBOX) */}
       {viewMode === 'threads' ? (
         <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
@@ -283,7 +432,7 @@ export const SMSActivityPanel: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search worker by name, trade or phone..."
+                placeholder="Search worker by name, trade, gig or phone..."
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-shramik-500/30"
               />
             </div>
@@ -325,8 +474,9 @@ export const SMSActivityPanel: React.FC = () => {
                 const isSelected = w.id === currentWorkerId;
                 return (
                   <button
-                    key={w.id}
+                    key={`${w.jobId}-${w.id}`}
                     onClick={() => {
+                      if (w.jobId) setSelectedJobIdForDemo(w.jobId);
                       setSelectedWorkerForDemo(w.id || 'SQ-F-1042');
                       setViewMode('chat');
                     }}
@@ -351,9 +501,9 @@ export const SMSActivityPanel: React.FC = () => {
                           {w.lastMessage}
                         </p>
                         <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
-                          <span>{w.skill}</span>
+                          <span className="font-semibold text-shramik-700">{w.jobTitle}</span>
                           <span>•</span>
-                          <span>{w.mobile}</span>
+                          <span>{w.skill}</span>
                           <span>•</span>
                           <span>{w.lastTime}</span>
                         </div>
@@ -417,29 +567,92 @@ export const SMSActivityPanel: React.FC = () => {
                   onClick={() => setViewMode('threads')}
                   className="text-xs font-semibold text-slate-500 hover:text-navy-900 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
-                  Switch Worker
+                  All Inbox
                 </button>
               )}
             </div>
           </div>
 
+          {/* Quick Candidate Switching Strip */}
+          {candidateWorkers.length > 1 && (
+            <div className="bg-white/90 backdrop-blur-xs px-3 py-1.5 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <span className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Candidates:</span>
+              {candidateWorkers.map(w => {
+                const isSelected = w.id === currentWorkerId;
+                return (
+                  <button
+                    key={`${w.jobId}-${w.id}`}
+                    onClick={() => {
+                      if (w.jobId) setSelectedJobIdForDemo(w.jobId);
+                      setSelectedWorkerForDemo(w.id);
+                    }}
+                    className={`shrink-0 text-xs px-2.5 py-1 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      isSelected
+                        ? 'bg-navy-900 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>{w.name}</span>
+                    {w.messageCount > 0 && (
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-black ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
+                        {w.messageCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* SMS Feed */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-100/60">
             {workerMessages.length === 0 ? (
-              <div className="text-center py-12 px-4 text-slate-500">
-                <Smartphone className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                <h4 className="font-bold text-slate-700 text-sm">No SMS messages yet</h4>
-                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                  When you dispatch job opportunities to {currentWorker?.name || 'this worker'}, outgoing SMS and their replies appear here.
-                </p>
-                <div className="mt-4">
-                  <button
-                    onClick={() => handleSendCustom('1')}
-                    className="tactile-btn-primary text-xs font-bold px-4 py-2"
-                  >
-                    Simulate Worker Reply (1)
-                  </button>
+              <div className="text-center py-10 px-4 text-slate-500">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 border border-amber-200 flex items-center justify-center mx-auto mb-3">
+                  <Smartphone className="w-6 h-6" />
                 </div>
+                <h4 className="font-bold text-slate-800 text-sm">No Opportunity Dispatched Yet</h4>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                  {currentWorker?.name} has not received an SMS opportunity for <strong>{activeJob?.title || 'this job'}</strong> yet.
+                </p>
+
+                {activeJob && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => {
+                        sendOpportunities(activeJob.id, [currentWorkerId]);
+                      }}
+                      className="tactile-btn-primary bg-amber-500 hover:bg-amber-600 shadow-[0_4px_0_0_#d97706] text-xs font-bold px-4 py-2.5 inline-flex items-center gap-2 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Send Opportunity to {currentWorker?.name} Now</span>
+                    </button>
+                  </div>
+                )}
+
+                {otherWorkersWithMessages.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-slate-200">
+                    <span className="text-[11px] font-bold text-slate-400 block mb-2 uppercase tracking-wide">
+                      Workers with Active SMS Conversations:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 justify-center">
+                      {otherWorkersWithMessages.map(w => (
+                        <button
+                          key={`${w.jobId}-${w.id}`}
+                          onClick={() => {
+                            if (w.jobId) setSelectedJobIdForDemo(w.jobId);
+                            setSelectedWorkerForDemo(w.id);
+                          }}
+                          className="text-xs font-bold text-navy-900 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <span>{w.name}</span>
+                          <span className="text-[10px] text-slate-400">({w.jobTitle})</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               workerMessages.map((msg) => {
@@ -491,7 +704,7 @@ export const SMSActivityPanel: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Action Response Chips ("Simple & Easy to use") */}
+          {/* Quick Action Response Chips */}
           <div className="bg-white border-t border-slate-200 p-2.5 space-y-2">
             <div className="flex items-center justify-between text-[11px] text-slate-500 px-1 font-semibold">
               <span>Quick Worker Responses:</span>
