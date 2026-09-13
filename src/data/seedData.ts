@@ -1,4 +1,4 @@
-import { User, Job, WorkHistoryItem } from '../types';
+import { User, Job, WorkHistoryItem, JobApplication, SMSMessage } from '../types';
 
 export const SEED_USERS: User[] = [
   // Seed Customers across different industry segments
@@ -1037,5 +1037,93 @@ export const INITIAL_WORK_HISTORY: WorkHistoryItem[] = [
     feedback: 'Punctual and highly skilled. Highly recommended.',
     earnedAmount: 2400,
     customerName: 'Anand Kulkarni'
+  }
+];
+
+export const INITIAL_APPLICATIONS: JobApplication[] = [
+  {
+    id: 'APP-SEED-101',
+    jobId: 'SQ-J-3001',
+    workerId: 'SQ-F-1042',
+    status: 'details_requested',
+    sentAt: '2026-09-12T08:00:00.000Z',
+    viewedAt: '2026-09-12T08:02:15.000Z'
+  },
+  {
+    id: 'APP-SEED-102',
+    jobId: 'SQ-J-3001',
+    workerId: 'SQ-F-1043',
+    status: 'sent',
+    sentAt: '2026-09-12T08:00:00.000Z'
+  },
+  {
+    id: 'APP-SEED-103',
+    jobId: 'SQ-J-3001',
+    workerId: 'SQ-F-1044',
+    status: 'sent',
+    sentAt: '2026-09-12T08:00:00.000Z'
+  }
+];
+
+export const INITIAL_SMS_MESSAGES: SMSMessage[] = [
+  {
+    id: 'SMS-SEED-103',
+    jobId: 'SQ-J-3001',
+    workerId: 'SQ-F-1042',
+    workerName: 'Ramesh Naik',
+    workerPhone: '+91 98221 54321',
+    direction: 'outgoing',
+    content: 'SHRAMIK\nकामाचा संपूर्ण तपशील:\nPainting Project - 4-Storey Exterior Weather Coating\nस्थान: Mapusa Industrial Area, Goa\nसुरुवात: 18 Sept 2026, सकाळी 8:00 AM\nकालावधी: 5 दिवस\nमोबदला: ₹800/दिवस\n\nस्वीकारण्यासाठी 1 पाठवा, नकार देण्यासाठी 0 पाठवा.',
+    timestamp: '08:02 AM',
+    status: 'delivered',
+    step: 'acceptance'
+  },
+  {
+    id: 'SMS-SEED-102',
+    jobId: 'SQ-J-3001',
+    workerId: 'SQ-F-1042',
+    workerName: 'Ramesh Naik',
+    workerPhone: '+91 98221 54321',
+    direction: 'incoming',
+    content: '1',
+    timestamp: '08:02 AM',
+    status: 'delivered',
+    step: 'details'
+  },
+  {
+    id: 'SMS-SEED-101',
+    jobId: 'SQ-J-3001',
+    workerId: 'SQ-F-1042',
+    workerName: 'Ramesh Naik',
+    workerPhone: '+91 98221 54321',
+    direction: 'outgoing',
+    content: 'SHRAMIK\nनवीन संधी:\nPainting Project - 4-Storey Exterior Weather Coating\nस्थान: Mapusa Industrial Area, Goa\nसुरुवात: 18 Sept 2026\nकालावधी: 5 दिवस\nमोबदला: ₹800/दिवस\nकामगार संख्या: 10\n\nसविस्तर माहितीसाठी 1 पाठवा, नाकारण्यासाठी 0 पाठवा.',
+    timestamp: '08:00 AM',
+    status: 'delivered',
+    step: 'opportunity'
+  },
+  {
+    id: 'SMS-SEED-104',
+    jobId: 'SQ-J-3001',
+    workerId: 'SQ-F-1043',
+    workerName: 'Sunil Jadhav',
+    workerPhone: '+91 98221 65432',
+    direction: 'outgoing',
+    content: 'SHRAMIK\nनवीन संधी:\nPainting Project - 4-Storey Exterior Weather Coating\nस्थान: Mapusa Industrial Area, Goa\nसुरुवात: 18 Sept 2026\nकालावधी: 5 दिवस\nमोबदला: ₹800/दिवस\nकामगार संख्या: 10\n\nसविस्तर माहितीसाठी 1 पाठवा, नाकारण्यासाठी 0 पाठवा.',
+    timestamp: '08:00 AM',
+    status: 'delivered',
+    step: 'opportunity'
+  },
+  {
+    id: 'SMS-SEED-105',
+    jobId: 'SQ-J-3001',
+    workerId: 'SQ-F-1044',
+    workerName: 'Deepak Sawant',
+    workerPhone: '+91 98221 76543',
+    direction: 'outgoing',
+    content: 'SHRAMIK\nनवीन संधी:\nPainting Project - 4-Storey Exterior Weather Coating\nस्थान: Mapusa Industrial Area, Goa\nसुरुवात: 18 Sept 2026\nकालावधी: 5 दिवस\nमोबदला: ₹800/दिवस\nकामगार संख्या: 10\n\nसविस्तर माहितीसाठी 1 पाठवा, नाकारण्यासाठी 0 पाठवा.',
+    timestamp: '08:00 AM',
+    status: 'delivered',
+    step: 'opportunity'
   }
 ];

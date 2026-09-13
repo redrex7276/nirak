@@ -110,9 +110,14 @@ export class SMSService {
       }
     }
 
-    const app = db.prepare('SELECT * FROM job_applications WHERE job_id = ? AND worker_id = ?').get(jobId, workerId) as any;
+    let app = db.prepare('SELECT * FROM job_applications WHERE job_id = ? AND worker_id = ?').get(jobId, workerId) as any;
     if (!app) {
-      throw new Error(`No application opportunity found for worker ${workerId} on job ${jobId}.`);
+      const autoAppId = `app-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      db.prepare(`
+        INSERT INTO job_applications (id, job_id, worker_id, status, sms_state, created_at, updated_at)
+        VALUES (?, ?, ?, 'sms_sent', 'WAITING_FOR_DETAILS_REQUEST', datetime('now'), datetime('now'))
+      `).run(autoAppId, jobId, workerId);
+      app = { id: autoAppId, job_id: jobId, worker_id: workerId, status: 'sms_sent', sms_state: 'WAITING_FOR_DETAILS_REQUEST' };
     }
 
     const info = this.getWorkerInfo(workerId);

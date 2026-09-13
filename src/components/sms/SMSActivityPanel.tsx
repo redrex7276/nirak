@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   MessageSquare, 
   Send, 
@@ -209,9 +209,9 @@ export const SMSActivityPanel: React.FC = () => {
     (a.workerId === currentWorkerId || (currentWorkerUser && (a.workerId === currentWorkerUser.id || a.workerId === currentWorkerUser.freelancerProfile?.freelancerId)))
   ) : null;
 
-  // Messages for currently selected worker (with flexible ID & phone matching)
+  // Messages for currently selected worker (sorted chronologically oldest -> newest for chat thread)
   const workerMessages = useMemo(() => {
-    return smsMessages.filter(m => {
+    const list = smsMessages.filter(m => {
       const matchesWorker = 
         m.workerId === currentWorkerId ||
         (currentWorkerUser && (m.workerId === currentWorkerUser.id || m.workerId === currentWorkerUser.freelancerProfile?.freelancerId)) ||
@@ -226,7 +226,13 @@ export const SMSActivityPanel: React.FC = () => {
       }
       return true;
     });
+    return [...list].reverse();
   }, [smsMessages, currentWorkerId, currentWorkerUser, currentWorker, activeJob]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [workerMessages.length]);
 
   // Other workers with active messages
   const otherWorkersWithMessages = useMemo(() => {
@@ -270,12 +276,9 @@ export const SMSActivityPanel: React.FC = () => {
 
   const handleSendCustom = async (textToSend?: string) => {
     const text = (textToSend !== undefined ? textToSend : customReply).trim();
-    if (activeJob && text) {
-      if (!currentApplication && activeJob) {
-        // Automatically dispatch opportunity first so state transitions correctly
-        await sendOpportunities(activeJob.id, [currentWorkerId]);
-      }
-      simulateWorkerReply(activeJob.id, currentWorkerId, text);
+    if (text) {
+      const targetJobId = activeJob?.id || selectedJobIdForDemo || 'SQ-J-3001';
+      await simulateWorkerReply(targetJobId, currentWorkerId, text);
       if (textToSend === undefined) {
         setCustomReply('');
       }
@@ -702,6 +705,7 @@ export const SMSActivityPanel: React.FC = () => {
                 );
               })
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Quick Action Response Chips */}

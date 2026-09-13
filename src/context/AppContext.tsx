@@ -238,8 +238,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Backend dispatch note, falling back:', apiErr);
     }
 
-    const targetJob = jobs.find(j => j.id === jobId);
-    if (!targetJob) return;
+    const targetJob = jobs.find(j => j.id === jobId) || jobs[0];
+    const actualJobId = targetJob?.id || jobId || 'SQ-J-3001';
 
     const newApps: JobApplication[] = [];
     const newSMSList: SMSMessage[] = [];
@@ -249,14 +249,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const workerProfile = workerUser?.freelancerProfile;
       const workerName = workerUser?.name || 'Worker';
       const workerPhone = workerUser?.mobile || '+91 98000 00000';
-      const lang = workerProfile?.preferredLanguage || targetJob.preferredLanguage || 'en';
+      const lang = workerProfile?.preferredLanguage || targetJob?.preferredLanguage || 'mr';
 
       // Check if application already exists
-      const existing = applications.find(a => a.jobId === jobId && a.workerId === workerId);
+      const existing = applications.find(a => (a.jobId === actualJobId || a.jobId === jobId) && a.workerId === workerId);
       if (!existing) {
         newApps.push({
           id: `APP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          jobId,
+          jobId: actualJobId,
           workerId,
           status: 'sent',
           sentAt: new Date().toISOString()
@@ -266,18 +266,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Generate localized opportunity SMS
       const smsText = smsService.generateOpportunitySMS(
         {
-          title: targetJob.title,
-          location: targetJob.location,
-          date: targetJob.startDate,
-          duration: targetJob.durationDays,
-          rate: targetJob.paymentAmount,
-          workers: targetJob.workersRequired
+          title: targetJob?.title || 'Painting Project - 4-Storey Exterior Weather Coating',
+          location: targetJob?.location || 'Mapusa Industrial Area, Goa',
+          date: targetJob?.startDate || '18 Sept 2026',
+          duration: targetJob?.durationDays || 5,
+          rate: targetJob?.paymentAmount || 800,
+          workers: targetJob?.workersRequired || 10
         },
         lang
       );
 
       const sms = await smsService.sendSMS({
-        jobId,
+        jobId: actualJobId,
         workerId,
         workerPhone,
         workerName,
@@ -291,7 +291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Update applications and SMS history
     setApplications(prev => {
-      const existingFiltered = prev.filter(a => !(a.jobId === jobId && workerIds.includes(a.workerId)));
+      const existingFiltered = prev.filter(a => !( (a.jobId === actualJobId || a.jobId === jobId) && workerIds.includes(a.workerId) ));
       return [...newApps, ...existingFiltered];
     });
 
@@ -303,7 +303,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Update job state
     setJobs(prev => prev.map(j => {
-      if (j.id === jobId) {
+      if (j.id === actualJobId || j.id === jobId) {
         const unionNotified = Array.from(new Set([...j.notifiedWorkerIds, ...workerIds]));
         const updated = {
           ...j,
@@ -316,7 +316,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return j;
     }));
 
-    setSelectedJobIdForDemo(jobId);
+    setSelectedJobIdForDemo(actualJobId);
     if (workerIds.length > 0) {
       setSelectedWorkerForDemo(workerIds[0]);
     }
@@ -349,19 +349,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Backend simulate reply note, falling back:', apiErr);
     }
 
-    const targetJob = jobs.find(j => j.id === jobId);
+    const targetJob = jobs.find(j => j.id === jobId) || jobs[0];
+    const actualJobId = targetJob?.id || jobId || 'SQ-J-3001';
     const workerUser = users.find(u => u.id === workerId || u.freelancerProfile?.freelancerId === workerId);
     const workerName = workerUser?.name || 'Worker';
     const workerPhone = workerUser?.mobile || '+91 98000 00000';
-    const workerLang = workerUser?.freelancerProfile?.preferredLanguage || 'en';
+    const workerLang = workerUser?.freelancerProfile?.preferredLanguage || targetJob?.preferredLanguage || 'mr';
 
-    const currentApp = applications.find(a => 
-      a.jobId === jobId && 
+    let currentApp = applications.find(a => 
+      (a.jobId === actualJobId || a.jobId === jobId) && 
       (a.workerId === workerId || (workerUser && (a.workerId === workerUser.id || a.workerId === workerUser.freelancerProfile?.freelancerId)))
     );
+
+    let initialOpportunitySMS: SMSMessage | null = null;
+    let newAppCreated: JobApplication | null = null;
+
+    // Auto-create application and initial opportunity message if worker has not received one yet
     if (!currentApp) {
-      addToast('No Active Opportunity', 'Worker has not been sent an opportunity for this job.', 'warning');
-      return;
+      newAppCreated = {
+        id: `APP-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        jobId: actualJobId,
+        workerId,
+        status: 'sent',
+        sentAt: new Date(Date.now() - 60000).toISOString()
+      };
+      currentApp = newAppCreated;
+
+      const oppText = smsService.generateOpportunitySMS(
+        {
+          title: targetJob?.title || 'Painting Project - 4-Storey Exterior Weather Coating',
+          location: targetJob?.location || 'Mapusa Industrial Area, Goa',
+          date: targetJob?.startDate || '18 Sept 2026',
+          duration: targetJob?.durationDays || 5,
+          rate: targetJob?.paymentAmount || 800,
+          workers: targetJob?.workersRequired || 10
+        },
+        workerLang
+      );
+
+      initialOpportunitySMS = {
+        id: `SMS-INIT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        jobId: actualJobId,
+        workerId,
+        workerPhone,
+        workerName,
+        direction: 'outgoing',
+        content: oppText,
+        timestamp: new Date(Date.now() - 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'delivered',
+        step: 'opportunity'
+      };
     }
 
     // Parse the command strictly using smsService
@@ -370,13 +407,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Log incoming SMS
     const incomingSMS: SMSMessage = {
       id: `SMS-IN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      jobId,
+      jobId: actualJobId,
       workerId,
       workerPhone,
       workerName,
       direction: 'incoming',
       content: reply,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'delivered',
       step: currentApp.status === 'sent' ? 'details' : 'acceptance'
     };
@@ -389,18 +426,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const invalidGuideSMS = smsService.generateInvalidReplySMS(workerLang);
       const outgoingGuide: SMSMessage = {
         id: `SMS-OUT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        jobId,
+        jobId: actualJobId,
         workerId,
         workerPhone,
         workerName,
         direction: 'outgoing',
         content: invalidGuideSMS,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: 'delivered',
         step: 'info'
       };
 
-      setSmsMessages(prev => [outgoingGuide, incomingSMS, ...prev]);
+      const newMessages = [
+        outgoingGuide, 
+        incomingSMS,
+        ...(initialOpportunitySMS ? [initialOpportunitySMS] : [])
+      ];
+      setSmsMessages(prev => [...newMessages, ...prev]);
+      if (newAppCreated) {
+        setApplications(prev => [newAppCreated!, ...prev]);
+      }
       addToast('Safe Guidance Sent', `Worker replied "${reply}". System preserved job state and sent SMS help prompt.`, 'warning');
       return;
     }
@@ -408,22 +453,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const nextStatus = transition.nextStatus;
     const now = new Date().toISOString();
 
+    const updatedApp: JobApplication = {
+      ...currentApp,
+      status: nextStatus,
+      respondedAt: now,
+      viewedAt: nextStatus === 'details_requested' ? now : currentApp.viewedAt
+    };
+
     // 3. Update application state
-    setApplications(prev => prev.map(a => {
-      if (a.id === currentApp.id) {
-        return {
-          ...a,
-          status: nextStatus,
-          respondedAt: now,
-          viewedAt: nextStatus === 'details_requested' ? now : a.viewedAt
-        };
-      }
-      return a;
-    }));
+    setApplications(prev => {
+      const filtered = prev.filter(a => a.id !== updatedApp.id && !( (a.jobId === actualJobId || a.jobId === jobId) && a.workerId === workerId ));
+      return [updatedApp, ...filtered];
+    });
 
     // 4. Update job interested/assigned IDs
     setJobs(prev => prev.map(j => {
-      if (j.id === jobId) {
+      if (j.id === actualJobId || j.id === jobId) {
         let interested = [...j.interestedWorkerIds];
         if (nextStatus === 'accepted' && !interested.includes(workerId)) {
           interested.push(workerId);
@@ -433,6 +478,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           ...j,
           status: interested.length > 0 ? 'responses_received' : j.status,
+          notifiedWorkerIds: Array.from(new Set([...j.notifiedWorkerIds, workerId])),
           interestedWorkerIds: interested
         };
       }
@@ -461,25 +507,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const outgoingSMS: SMSMessage = {
       id: `SMS-OUT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      jobId,
+      jobId: actualJobId,
       workerId,
       workerPhone,
       workerName,
       direction: 'outgoing',
       content: replyContent,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'delivered',
       step: transition.outgoingStep || 'info'
     };
 
-    setSmsMessages(prev => [outgoingSMS, incomingSMS, ...prev]);
+    const newMessages = [
+      outgoingSMS, 
+      incomingSMS,
+      ...(initialOpportunitySMS ? [initialOpportunitySMS] : [])
+    ];
+    setSmsMessages(prev => [...newMessages, ...prev]);
 
     // Background sync to Firebase
-    firebaseService.syncApplication({
-      ...currentApp,
-      status: nextStatus,
-      respondedAt: now
-    });
+    firebaseService.syncApplication(updatedApp);
+    if (initialOpportunitySMS) firebaseService.syncSMSMessage(initialOpportunitySMS);
     firebaseService.syncSMSMessage(incomingSMS);
     firebaseService.syncSMSMessage(outgoingSMS);
 

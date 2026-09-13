@@ -1,5 +1,5 @@
 import { User, Job, JobApplication, SMSMessage, WorkHistoryItem, LanguageCode } from '../types';
-import { SEED_USERS, INITIAL_JOBS, INITIAL_WORK_HISTORY } from '../data/seedData';
+import { SEED_USERS, INITIAL_JOBS, INITIAL_WORK_HISTORY, INITIAL_APPLICATIONS, INITIAL_SMS_MESSAGES } from '../data/seedData';
 
 const STORAGE_KEYS = {
   USERS: 'shramik_users_v1',
@@ -116,11 +116,19 @@ export const storageService = {
 
   getApplications(): JobApplication[] {
     const data = safeGet(STORAGE_KEYS.APPLICATIONS);
-    if (!data) return [];
+    if (!data) {
+      this.saveApplications(INITIAL_APPLICATIONS);
+      return INITIAL_APPLICATIONS;
+    }
     try {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+      this.saveApplications(INITIAL_APPLICATIONS);
+      return INITIAL_APPLICATIONS;
     } catch {
-      return [];
+      return INITIAL_APPLICATIONS;
     }
   },
 
@@ -134,11 +142,19 @@ export const storageService = {
 
   getSMSMessages(): SMSMessage[] {
     const data = safeGet(STORAGE_KEYS.SMS_MESSAGES);
-    if (!data) return [];
+    if (!data) {
+      this.saveSMSMessages(INITIAL_SMS_MESSAGES);
+      return INITIAL_SMS_MESSAGES;
+    }
     try {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+      this.saveSMSMessages(INITIAL_SMS_MESSAGES);
+      return INITIAL_SMS_MESSAGES;
     } catch {
-      return [];
+      return INITIAL_SMS_MESSAGES;
     }
   },
 
@@ -193,6 +209,8 @@ export const storageService = {
     safeRemove(STORAGE_KEYS.WORK_HISTORY);
     this.saveUsers(SEED_USERS);
     this.saveJobs(INITIAL_JOBS);
+    this.saveApplications(INITIAL_APPLICATIONS);
+    this.saveSMSMessages(INITIAL_SMS_MESSAGES);
     this.saveWorkHistory(INITIAL_WORK_HISTORY);
   }
 };
