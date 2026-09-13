@@ -53,17 +53,29 @@ class ApiClient {
       headers
     });
 
-    let data: any = null;
+    const contentType = response.headers.get('content-type') || '';
     const text = await response.text();
+
+    if (!response.ok) {
+      let errMsg = `Request failed with status ${response.status}`;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed?.error?.message) errMsg = parsed.error.message;
+      } catch {
+        // use default status message
+      }
+      throw new Error(errMsg);
+    }
+
+    if (!contentType.includes('application/json') || text.trim().startsWith('<')) {
+      throw new Error('Backend API endpoint not available (HTML SPA fallback received)');
+    }
+
+    let data: any = null;
     try {
       data = text ? JSON.parse(text) : {};
     } catch {
-      data = { error: { message: text || `Request failed with status ${response.status}` } };
-    }
-
-    if (!response.ok) {
-      const msg = data?.error?.message || `Request failed with status ${response.status}`;
-      throw new Error(msg);
+      throw new Error('Invalid JSON response from server');
     }
 
     return data as T;
